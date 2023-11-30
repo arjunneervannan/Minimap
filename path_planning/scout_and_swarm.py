@@ -5,9 +5,10 @@ from matplotlib.animation import FuncAnimation
 def objective_function(position, target):
     return np.linalg.norm(position - target)
 
-def plot_swarm(positions, target, iteration, best_distance, bound, target_found, ax):
+def plot_swarm(scout_positions, positions, target, iteration, best_distance, bound, target_found, ax):
     ax.clear()
-    ax.scatter(positions[:, 0], positions[:, 1], label='UAVs', marker='o', color='blue', s=10)
+    ax.scatter(scout_positions[:, 0], scout_positions[:, 1], label='Scout UAVs', marker='o', color='green', s=10)
+    ax.scatter(positions[:, 0], positions[:, 1], label='Wolfpack UAVs', marker='o', color='blue', s=10)
     if target_found:
         ax.scatter(target[0], target[1], label='Target', marker='x', color='red')
     ax.set_title(f'Iteration {iteration}, Target Found: {target_found}')
@@ -64,10 +65,9 @@ def generate_path_2(bound, max_velocity, viewing_radius):
     return path
 
 
-def check_if_target_found(positions, target, viewing_radius):
-    min_dist = -1
-    for drone_id in range(num_particles):
-        fitness = objective_function(positions[drone_id], target)
+def check_if_target_found(scout_positions, target, viewing_radius):
+    for drone_id in range(len(scout_positions)):
+        fitness = objective_function(scout_positions[drone_id], target)
         if fitness < viewing_radius:
             return True
     return False
@@ -126,7 +126,7 @@ def generate_spiral_path(bound, max_velocity, viewing_radius):
     length_of_square = int(bound / viewing_radius)
     result.append(current_position)
 
-    direction = 0 if clockwise else 3  # 0: right, 1: down, 2: left, 3: up
+    direction = 0
     top, bottom, left, right = 0, length_of_square - 1, 0, length_of_square - 1
 
     count = 1
@@ -134,94 +134,57 @@ def generate_spiral_path(bound, max_velocity, viewing_radius):
     while top <= bottom and left <= right:
         if direction == 0:  # Traverse right
             for i in range(left, right + 1):
-                result.append((top, i))
+                result.append(convert_square_coord_to_position((top, i), max_velocity))
                 count += 1
             top += 1
 
         elif direction == 1:  # Traverse down
             for i in range(top, bottom + 1):
-                result.append((i, right))
+                result.append(convert_square_coord_to_position((i, right), max_velocity))
                 count += 1
             right -= 1
 
         elif direction == 2:  # Traverse left
             for i in range(right, left - 1, -1):
-                result.append((bottom, i))
+                result.append(convert_square_coord_to_position((bottom, i), max_velocity))
                 count += 1
             bottom -= 1
 
         elif direction == 3:  # Traverse up
             for i in range(bottom, top - 1, -1):
-                result.append((i, left))
+                result.append(convert_square_coord_to_position((i, left), max_velocity))
                 count += 1
             left += 1
 
-        direction = (direction + 1) % 4 if clockwise else (direction - 1) % 4
+        direction = (direction + 1) % 4
 
     return result
 
-def generate_anticlockwise_spiral(bound, max_velocity, viewing_radius):
-    result = []
-    current_position = (0, 0)
-    length_of_square = int(bound / viewing_radius)
-    result.append(current_position)
-
-
-    top, bottom, left, right = 0, length_of_square - 1, 0, length_of_square - 1
-
-    count = 1
-
-    while top <= bottom and left <= right:
-        # Traverse top row
-        for i in range(left, right + 1):
-            result.append((top, i))
-            count += 1
-        top += 1
-
-        # Traverse right column
-        for i in range(top, bottom + 1):
-            result.append((i, right))
-            count += 1
-        right -= 1
-
-        # Traverse bottom row
-        if top <= bottom:
-            for i in range(right, left - 1, -1):
-                result.append((bottom, i))
-                count += 1
-            bottom -= 1
-
-        # Traverse left column
-        if left <= right:
-            for i in range(bottom, top - 1, -1):
-                result.append((i, left))
-                count += 1
-            left += 1
-
-    return result
-
-def particle_swarm_optimization_visualized(num_particles, num_dimensions, target, max_iterations=2000, c1=3.0, c2=2.0, w=0.8):
+def particle_swarm_optimization_visualized(num_particles, num_dimensions, target, max_iterations=2000, c1=1.0, c2=2.0, w=0.8):
     fig, ax = plt.subplots(figsize=(8, 8))
+    scout_drone_ids = [0, 1, 2, 3, 4]
+    
+    scout_positions = np.zeros((len(scout_drone_ids), num_dimensions))
 
     positions = np.zeros((num_particles, num_dimensions))
     velocities = np.random.rand(num_particles, num_dimensions)
-    max_velocity = 20
+    max_velocity = 2
     bound = 100
-    target_found = True
+    target_found = False
     path_1 = generate_path_1(bound, max_velocity, max_velocity)
     path_2 = generate_path_2(bound, max_velocity, max_velocity)
     path_3 = generate_diagonal_path(bound, max_velocity, max_velocity)
     path_4 = generate_diagonal_path_2(bound, max_velocity, max_velocity)
     path_5 = generate_spiral_path(bound, max_velocity, max_velocity)
-    path_6 = generate_anticlockwise_spiral(bound, max_velocity, max_velocity)
     
     path_1_full = double_path_size(double_path_size(path_1))
     path_2_full = double_path_size(double_path_size(path_2))
     path_3_full = double_path_size(double_path_size(path_3))
     path_4_full = double_path_size(double_path_size(path_4))
+    path_5_full = double_path_size(double_path_size(path_5))
     
-    scout_drone_ids = [0, 1, 2, 3]
-
+    all_paths = [path_1_full, path_2_full, path_3_full, path_4_full, path_5_full]
+    
     personal_best_positions = positions.copy()
     personal_best_values = np.array([objective_function(pos, target) for pos in personal_best_positions])
 
@@ -234,17 +197,13 @@ def particle_swarm_optimization_visualized(num_particles, num_dimensions, target
         nonlocal positions, velocities, personal_best_positions, personal_best_values, global_best_position, global_best_value, target_found, max_velocity, path_index
         
         if (not target_found):
-            positions[0] = path_1_full[path_index]
-            positions[1] = path_2_full[path_index]
-            positions[2] = path_3_full[path_index]
-            positions[3] = path_4_full[path_index]
+            for drone_id in scout_drone_ids:
+                scout_positions[drone_id] = all_paths[drone_id][path_index]
             path_index += 1
-            target_found = check_if_target_found(positions, target, max_velocity)
+            target_found = check_if_target_found(scout_positions, target, max_velocity)
         else:
-            positions[0] = path_1_full[path_index]
-            positions[1] = path_2_full[path_index]
-            positions[2] = path_3_full[path_index]
-            positions[3] = path_4_full[path_index]
+            for drone_id in scout_drone_ids:
+                scout_positions[drone_id] = all_paths[drone_id][path_index]
             path_index += 1
             for drone_id in range(num_particles):
                 r1, r2 = np.random.rand(), np.random.rand()
@@ -266,15 +225,16 @@ def particle_swarm_optimization_visualized(num_particles, num_dimensions, target
 
         print(f"Iteration {frame + 1}: Best Fitness = {global_best_value}")
         lowest_dist = np.linalg.norm(global_best_position - target)
-        plot_swarm(positions, target, frame + 1, lowest_dist, bound, target_found, ax)
+        plot_swarm(scout_positions, positions, target, frame + 1, lowest_dist, bound, target_found, ax)
 
     anim = FuncAnimation(fig, update, frames=max_iterations, interval=1, repeat=False)
     plt.show()
 
     return global_best_position, global_best_value
 
-num_particles = 8
+num_particles = 7
 num_dimensions = 2
-target = np.random.rand(2) * 100  # Random initialization of the target
+# target = np.random.rand(2) * 100  # Random initialization of the target
+target = (30, 30)
 best_position, best_value = particle_swarm_optimization_visualized(num_particles, num_dimensions, target)
 print(f"Optimal Position: {best_position}, Optimal Value: {best_value}")
