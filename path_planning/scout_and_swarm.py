@@ -16,41 +16,79 @@ def plot_swarm(positions, target, iteration, best_distance, bound, target_found,
     ax.set_xlim(0, bound)
     ax.set_ylim(0, bound)
 
-def max_magnitude(input_val, max_val=0.5):
-    if abs(input_val) > max_val:
-        if input_val < 0:
-            return -1 * max_val
-        return max_val
-    return input_val
+def convert_square_coord_to_position(current_position, max_velocity):
+    position_in_square = (current_position[0] * max_velocity + max_velocity / 2, current_position[1] * max_velocity + max_velocity / 2)
+    return position_in_square
 
 def generate_path_1(bound, max_velocity, viewing_radius):
     path = []
     current_position = (0, 0)
     path.append(current_position)
-    length_of_square = bound / viewing_radius
-
-    while current_position[0] < length_of_square:
-        # Move up in the current row
-        current_position = (current_position[0], current_position[1] + 1)
-        position_in_square = (current_position[0] * max_velocity + max_velocity / 2, current_position[1] * max_velocity + max_velocity / 2)
-        path.append(position_in_square)
-
-        # Move down to the next row if at the end
-        if current_position[0] == length_of_square:
-            current_position = (current_position[0], current_position[1])
-            position_in_square = (current_position[0] * max_velocity + max_velocity / 2, current_position[1] * max_velocity + max_velocity / 2)
-            path.append(current_position)
+    length_of_square = int(bound / viewing_radius)
+    
+    for x_pos in range(0, length_of_square):
+        for y_pos in range(0, length_of_square):
+            parity = x_pos % 2
+            if parity == 0:
+                current_position = (x_pos, y_pos)
+            else:
+                current_position = (x_pos, length_of_square - y_pos - 1)
+            position_in_square = convert_square_coord_to_position(current_position, max_velocity)
+            path.append(position_in_square)
 
     return path
+
+
+def generate_path_2(bound, max_velocity, viewing_radius):
+    path = []
+    current_position = (0, 0)
+    path.append(current_position)
+    length_of_square = int(bound / viewing_radius)
+    
+    for y_pos in range(0, length_of_square):
+        for x_pos in range(0, length_of_square):
+            parity = y_pos % 2
+            if parity == 0:
+                current_position = (x_pos, y_pos)
+            else:
+                current_position = (length_of_square - x_pos - 1, y_pos)
+            position_in_square = convert_square_coord_to_position(current_position, max_velocity)
+            path.append(position_in_square)
+
+    return path
+
+
+def diagonal_path(bound, max_velocity, viewing_radius):
+    path = []
+    current_position = (0, 0)
+    path.append(current_position)
+    length_of_square = int(bound / viewing_radius)
+    
+    for x_pos in range(0, length_of_square):
+        for y_pos in range(0, length_of_square):
+            sum = x_pos + y_pos
+            current_position = (x_pos, y_pos)
+            if(sum % 2 ==0):
+    
+                #add at beginning
+                path[sum].insert(current_position)
+            else:
+    
+                #add at end of the list
+                path[sum].append(current_position)
+
 
 def particle_swarm_optimization_visualized(num_particles, num_dimensions, target, max_iterations=100, c1=2.0, c2=2.0, w=0.3):
     fig, ax = plt.subplots(figsize=(8, 8))
 
     positions = np.zeros((num_particles, num_dimensions))
     velocities = np.random.rand(num_particles, num_dimensions)
-    max_velocity = 2
+    max_velocity = 20
     bound = 100
     target_found = False
+    path_1 = generate_path_1(bound, max_velocity, max_velocity)
+    path_2 = generate_path_2(bound, max_velocity, max_velocity)
+    diagonal_path = diagonal_path(bound, max_velocity, max_velocity)
     
     scout_drone_ids = [0, 1, 2, 3]
 
