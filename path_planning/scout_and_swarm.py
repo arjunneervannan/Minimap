@@ -120,7 +120,7 @@ def generate_diagonal_path_2(bound, max_velocity, viewing_radius):
             path.append(convert_square_coord_to_position(j, max_velocity))
     return path
 
-def generate_spiral_path(bound, max_velocity, viewing_radius, clockwise=True):
+def generate_spiral_path(bound, max_velocity, viewing_radius):
     result = []
     current_position = (0, 0)
     length_of_square = int(bound / viewing_radius)
@@ -160,6 +160,46 @@ def generate_spiral_path(bound, max_velocity, viewing_radius, clockwise=True):
 
     return result
 
+def generate_anticlockwise_spiral(bound, max_velocity, viewing_radius):
+    result = []
+    current_position = (0, 0)
+    length_of_square = int(bound / viewing_radius)
+    result.append(current_position)
+
+
+    top, bottom, left, right = 0, length_of_square - 1, 0, length_of_square - 1
+
+    count = 1
+
+    while top <= bottom and left <= right:
+        # Traverse top row
+        for i in range(left, right + 1):
+            result.append((top, i))
+            count += 1
+        top += 1
+
+        # Traverse right column
+        for i in range(top, bottom + 1):
+            result.append((i, right))
+            count += 1
+        right -= 1
+
+        # Traverse bottom row
+        if top <= bottom:
+            for i in range(right, left - 1, -1):
+                result.append((bottom, i))
+                count += 1
+            bottom -= 1
+
+        # Traverse left column
+        if left <= right:
+            for i in range(bottom, top - 1, -1):
+                result.append((i, left))
+                count += 1
+            left += 1
+
+    return result
+
 def particle_swarm_optimization_visualized(num_particles, num_dimensions, target, max_iterations=2000, c1=3.0, c2=2.0, w=0.8):
     fig, ax = plt.subplots(figsize=(8, 8))
 
@@ -172,8 +212,8 @@ def particle_swarm_optimization_visualized(num_particles, num_dimensions, target
     path_2 = generate_path_2(bound, max_velocity, max_velocity)
     path_3 = generate_diagonal_path(bound, max_velocity, max_velocity)
     path_4 = generate_diagonal_path_2(bound, max_velocity, max_velocity)
-    path_5 = generate_clockwise_spiral_path(bound, max_velocity, max_velocity)
-    path_6 = generate_clockwise_spiral_path(bound, max_velocity, max_velocity, clockwise=False)
+    path_5 = generate_spiral_path(bound, max_velocity, max_velocity)
+    path_6 = generate_anticlockwise_spiral(bound, max_velocity, max_velocity)
     
     path_1_full = double_path_size(double_path_size(path_1))
     path_2_full = double_path_size(double_path_size(path_2))
