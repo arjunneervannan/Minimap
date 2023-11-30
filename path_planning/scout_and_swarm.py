@@ -120,18 +120,60 @@ def generate_diagonal_path_2(bound, max_velocity, viewing_radius):
             path.append(convert_square_coord_to_position(j, max_velocity))
     return path
 
+def generate_spiral_path(bound, max_velocity, viewing_radius, clockwise=True):
+    result = []
+    current_position = (0, 0)
+    length_of_square = int(bound / viewing_radius)
+    result.append(current_position)
+
+    direction = 0 if clockwise else 3  # 0: right, 1: down, 2: left, 3: up
+    top, bottom, left, right = 0, length_of_square - 1, 0, length_of_square - 1
+
+    count = 1
+
+    while top <= bottom and left <= right:
+        if direction == 0:  # Traverse right
+            for i in range(left, right + 1):
+                result.append((top, i))
+                count += 1
+            top += 1
+
+        elif direction == 1:  # Traverse down
+            for i in range(top, bottom + 1):
+                result.append((i, right))
+                count += 1
+            right -= 1
+
+        elif direction == 2:  # Traverse left
+            for i in range(right, left - 1, -1):
+                result.append((bottom, i))
+                count += 1
+            bottom -= 1
+
+        elif direction == 3:  # Traverse up
+            for i in range(bottom, top - 1, -1):
+                result.append((i, left))
+                count += 1
+            left += 1
+
+        direction = (direction + 1) % 4 if clockwise else (direction - 1) % 4
+
+    return result
+
 def particle_swarm_optimization_visualized(num_particles, num_dimensions, target, max_iterations=2000, c1=3.0, c2=2.0, w=0.8):
     fig, ax = plt.subplots(figsize=(8, 8))
 
     positions = np.zeros((num_particles, num_dimensions))
     velocities = np.random.rand(num_particles, num_dimensions)
-    max_velocity = 2
+    max_velocity = 20
     bound = 100
     target_found = True
     path_1 = generate_path_1(bound, max_velocity, max_velocity)
     path_2 = generate_path_2(bound, max_velocity, max_velocity)
     path_3 = generate_diagonal_path(bound, max_velocity, max_velocity)
     path_4 = generate_diagonal_path_2(bound, max_velocity, max_velocity)
+    path_5 = generate_clockwise_spiral_path(bound, max_velocity, max_velocity)
+    path_6 = generate_clockwise_spiral_path(bound, max_velocity, max_velocity, clockwise=False)
     
     path_1_full = double_path_size(double_path_size(path_1))
     path_2_full = double_path_size(double_path_size(path_2))
@@ -155,33 +197,32 @@ def particle_swarm_optimization_visualized(num_particles, num_dimensions, target
             positions[0] = path_1_full[path_index]
             positions[1] = path_2_full[path_index]
             positions[2] = path_3_full[path_index]
-            positions[4] = path_4_full[path_index]
+            positions[3] = path_4_full[path_index]
             path_index += 1
             target_found = check_if_target_found(positions, target, max_velocity)
         else:
             positions[0] = path_1_full[path_index]
             positions[1] = path_2_full[path_index]
             positions[2] = path_3_full[path_index]
-            positions[4] = path_4_full[path_index]
+            positions[3] = path_4_full[path_index]
             path_index += 1
             for drone_id in range(num_particles):
-                if drone_id not in scout_drone_ids:
-                    r1, r2 = np.random.rand(), np.random.rand()
-                    velocities[drone_id] = w * velocities[drone_id] + c1 * r1 * (personal_best_positions[drone_id] - positions[drone_id]) + \
-                                    c2 * r2 * (global_best_position - positions[drone_id])
-                    normalized_velocity = max_velocity * velocities[drone_id]/np.linalg.norm(velocities[drone_id])
-                    
-                    positions[drone_id] = positions[drone_id] + normalized_velocity
+                r1, r2 = np.random.rand(), np.random.rand()
+                velocities[drone_id] = w * velocities[drone_id] + c1 * r1 * (personal_best_positions[drone_id] - positions[drone_id]) + \
+                                c2 * r2 * (global_best_position - positions[drone_id])
+                normalized_velocity = max_velocity * velocities[drone_id]/np.linalg.norm(velocities[drone_id])
+                
+                positions[drone_id] = positions[drone_id] + normalized_velocity
 
-                    fitness = objective_function(positions[drone_id], target)
+                fitness = objective_function(positions[drone_id], target)
 
-                    if fitness < personal_best_values[drone_id]:
-                        personal_best_values[drone_id] = fitness
-                        personal_best_positions[drone_id] = positions[drone_id]
+                if fitness < personal_best_values[drone_id]:
+                    personal_best_values[drone_id] = fitness
+                    personal_best_positions[drone_id] = positions[drone_id]
 
-                    if fitness < global_best_value:
-                        global_best_value = fitness
-                        global_best_position = positions[drone_id]
+                if fitness < global_best_value:
+                    global_best_value = fitness
+                    global_best_position = positions[drone_id]
 
         print(f"Iteration {frame + 1}: Best Fitness = {global_best_value}")
         lowest_dist = np.linalg.norm(global_best_position - target)
@@ -192,7 +233,7 @@ def particle_swarm_optimization_visualized(num_particles, num_dimensions, target
 
     return global_best_position, global_best_value
 
-num_particles = 12
+num_particles = 8
 num_dimensions = 2
 target = np.random.rand(2) * 100  # Random initialization of the target
 best_position, best_value = particle_swarm_optimization_visualized(num_particles, num_dimensions, target)
