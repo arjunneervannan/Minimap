@@ -234,7 +234,7 @@ def particle_swarm_optimization_visualized(num_particles, num_dimensions, target
 
 num_particles = 7
 num_dimensions = 2
-# target = np.random.rand(2) * 100  # Random initialization of the target
-target = (20, 20)
+target = np.random.rand(2) * 100  # Random initialization of the target
+# target = (20, 20)
 best_position, best_value = particle_swarm_optimization_visualized(num_particles, num_dimensions, target)
 print(f"Optimal Position: {best_position}, Optimal Value: {best_value}")
