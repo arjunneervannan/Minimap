@@ -41,10 +41,13 @@ if __name__ == '__main__':
     # For Linux or macOS, you might need to uncomment the following lines:
     width = root.winfo_screenwidth()
     height = root.winfo_screenheight()
+    print(width, height)
+    
     root.geometry(f"{width}x{height}+0+0")
 
     # Create a navigation panel on the left side using the custom style
-    nav_panel = ttk.Frame(root, width=200, style="Custom.TFrame")
+    nav_panel_width = 200
+    nav_panel = ttk.Frame(root, width=nav_panel_width, style="Custom.TFrame")
     nav_panel.pack(side="left", fill="y")
     
     # Create a canvas for the map area
@@ -52,6 +55,7 @@ if __name__ == '__main__':
     canvas.pack(fill="both", expand=True, side="top")
 
     # Create a floating bar at the bottom
+    floating_bar_height = 50
     floating_bar = ttk.Frame(root, height=50)
     floating_bar.pack(fill="x", side="bottom")
 
@@ -68,7 +72,8 @@ if __name__ == '__main__':
     video_button.pack(side="left", padx=10, pady=5)
     reset_button.pack(side="left", padx=10, pady=5)
     
-    map_widget = tkintermapview.TkinterMapView(root, width=800, height=600, corner_radius=0)
+    map_widget = tkintermapview.TkinterMapView(root, width=width-nav_panel_width, 
+                                               height=900, corner_radius=0)
     map_widget.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
     # Bind mouse events to the canvas
