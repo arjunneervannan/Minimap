@@ -104,6 +104,10 @@ class App(customtkinter.CTk):
 
         # Set default values
         
+        self.map_widget.add_right_click_menu_command(label="Add Marker",
+                                        command=self.add_marker_event,
+                                        pass_coords=True)
+        
         self.map_widget.set_position(39.952, -75.192) # EQuad
         self.map_widget.set_zoom(15)
         self.map_option_menu.set("OpenStreetMap")
@@ -136,6 +140,10 @@ class App(customtkinter.CTk):
 
     def start(self):
         self.mainloop()
+        
+    def add_marker_event(self, coord):
+        print("Add marker:", coord)
+        new_marker = self.map_widget.set_marker(coord[0], coord[1], text="waypoint")
 
 
 if __name__ == "__main__":
