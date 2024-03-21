@@ -1,3 +1,0 @@
-# Minimap
-
-Senior Design Project
