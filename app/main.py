@@ -1,6 +1,7 @@
 import customtkinter
 import tkinter
 from tkintermapview import TkinterMapView
+from backend.path_generation import *
 
 customtkinter.set_default_color_theme("blue")
 
@@ -25,6 +26,7 @@ class App(customtkinter.CTk):
 
         self.marker_list = []
         self.path_list = []
+        self.rectangle_list = []
         self.switch_var = tkinter.IntVar(value=0)
 
         # ============ create two CTkFrames ============
@@ -63,9 +65,14 @@ class App(customtkinter.CTk):
         self.switch.grid(row=4, column=0, padx=(20, 20), pady=(20, 0))
 
         self.button_1 = customtkinter.CTkButton(master=self.frame_left,
+                                                text="Generate All Paths",
+                                                command=self.generate_paths_for_rectangles)
+        self.button_1.grid(pady=(20, 0), padx=(20, 20), row=5, column=0)
+
+        self.button_1 = customtkinter.CTkButton(master=self.frame_left,
                                                 text="Export All Paths",
                                                 command=self.set_marker_event)
-        self.button_1.grid(pady=(20, 0), padx=(20, 20), row=5, column=0)
+        self.button_1.grid(pady=(20, 0), padx=(20, 20), row=6, column=0)
 
         # self.button_2 = customtkinter.CTkButton(master=self.frame_left,
         #                                         text="Drone Setup",
@@ -82,13 +89,13 @@ class App(customtkinter.CTk):
 
         self.map_option_menu = customtkinter.CTkOptionMenu(self.frame_left, values=["OpenStreetMap", "Google normal", "Google Satellite"],
                                                                        command=self.change_map)
-        self.map_option_menu.grid(row=6, column=0, padx=(20, 20), pady=(10, 0))
+        self.map_option_menu.grid(row=7, column=0, padx=(20, 20), pady=(10, 0))
 
         self.appearance_mode_label = customtkinter.CTkLabel(self.frame_left, text="Appearance Mode:", anchor="w")
-        self.appearance_mode_label.grid(row=7, column=0, padx=(20, 20), pady=(20, 0))
+        self.appearance_mode_label.grid(row=8, column=0, padx=(20, 20), pady=(20, 0))
         self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.frame_left, values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode)
-        self.appearance_mode_optionemenu.grid(row=8, column=0, padx=(20, 20), pady=(10, 20))
+        self.appearance_mode_optionemenu.grid(row=9, column=0, padx=(20, 20), pady=(10, 20))
 
         # ============ frame_right ============
 
@@ -181,6 +188,16 @@ class App(customtkinter.CTk):
         coordinates.append(coordinates[0])
         self.path_list.append(self.map_widget.set_path(coordinates, width=3))
 
+    # code below is for drawing rectangles / disabling map
+
+    def switch_event(self):
+        if self.switch_var.get() == 1:
+            self.temporarily_unbind()
+        else:
+            self.rebind()
+            self.rectangle_list.append(self.map_widget.set_polygon(rectangle_coords, border_width=3, fill_color=None))
+            self.map_widget.canvas.delete("rectangle")
+
     def on_first_click(self, event):
         global start_x, start_y  # Save the starting point coordinates
         start_x, start_y = event.x, event.y
@@ -188,20 +205,10 @@ class App(customtkinter.CTk):
     def on_second_click(self, event):
         end_x, end_y = event.x, event.y  # Get the ending point coordinates
         global rectangle_coords
-
         if self.switch_var.get() == 1:
             rectangle_coords = self.convert_rectangle_coords(start_x, start_y, end_x, end_y)
             self.map_widget.canvas.create_rectangle(start_x, start_y, end_x, end_y, outline="black", width=3,
                                                     tags="rectangle", dash=(5, 5))
-            print("rectangle coords:", rectangle_coords)
-
-    def switch_event(self):
-        if self.switch_var.get() == 1:
-            self.temporarily_unbind()
-        else:
-            self.rebind()
-            self.map_widget.set_polygon(rectangle_coords, border_width=3, fill_color=None)
-            self.map_widget.canvas.delete("rectangle")
 
     def temporarily_unbind(self):
         self.map_widget.canvas.unbind("<B1-Motion>")
@@ -223,6 +230,18 @@ class App(customtkinter.CTk):
         (x1, y1) = self.map_widget.convert_canvas_coords_to_decimal_coords(start_x, start_y)
         (x2, y2) = self.map_widget.convert_canvas_coords_to_decimal_coords(end_x, end_y)
         return [(x1, y1),  (x2, y1), (x2, y2), (x1, y2)]
+
+    def generate_paths_for_rectangles(self):
+        turning_radius_ft = 100
+        for rectangle in self.rectangle_list:
+            if not rectangle.deleted:
+                (startx, starty) = rectangle.position_list[0]
+                (endx, endy) = rectangle.position_list[2]
+                delta_lat, delta_lon = feet_to_latlon(turning_radius_ft, startx)
+                horizontal_path = generate_paths(endx, starty, startx, endy, delta_lon, direction='horizontal')
+                vertical_path = generate_paths(endx, starty, startx, endy, delta_lat, direction='vertical')
+                self.path_list.append(self.map_widget.set_path(horizontal_path, width=0.5, color="green"))
+                self.path_list.append(self.map_widget.set_path(vertical_path, width=0.5, color="red"))
 
 
 if __name__ == "__main__":
