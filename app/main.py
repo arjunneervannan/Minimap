@@ -72,7 +72,7 @@ class App(customtkinter.CTk):
         # self.map_label.grid(row=4, column=0, padx=(20, 20), pady=(20, 0))
         self.map_option_menu = customtkinter.CTkOptionMenu(self.frame_left, values=["OpenStreetMap", "Google normal", "Google satellite"],
                                                                        command=self.change_map)
-        # self.map_option_menu.grid(row=5, column=0, padx=(20, 20), pady=(10, 0))
+        self.map_option_menu.grid(row=5, column=0, padx=(20, 20), pady=(10, 0))
 
         self.appearance_mode_label = customtkinter.CTkLabel(self.frame_left, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.grid(row=6, column=0, padx=(20, 20), pady=(20, 0))
@@ -107,6 +107,9 @@ class App(customtkinter.CTk):
         self.map_widget.add_right_click_menu_command(label="Add Marker",
                                         command=self.add_marker_event,
                                         pass_coords=True)
+        self.map_widget.add_right_click_menu_command(label="Add Path",
+                                        command=self.add_path_event,
+                                        pass_coords=False)
         
         self.map_widget.set_position(39.952, -75.192) # EQuad
         self.map_widget.set_zoom(15)
@@ -142,8 +145,15 @@ class App(customtkinter.CTk):
         self.mainloop()
         
     def add_marker_event(self, coord):
-        print("Add marker:", coord)
         new_marker = self.map_widget.set_marker(coord[0], coord[1], text="waypoint")
+        
+    def add_path_event(self):
+        coordinates = []
+        for marker in self.marker_list:
+            print("marker position: ", marker.position)
+            # coordinates.append(marker.position)
+        # print(coordinates)
+        # new_marker = self.map_widget.set_path(coordinates)
 
 
 if __name__ == "__main__":
