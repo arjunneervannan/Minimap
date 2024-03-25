@@ -2,6 +2,7 @@ import customtkinter
 import tkinter
 from tkintermapview import TkinterMapView
 from backend.path_generation import *
+from backend.waypoint_export import *
 
 customtkinter.set_default_color_theme("blue")
 
@@ -71,7 +72,7 @@ class App(customtkinter.CTk):
 
         self.button_1 = customtkinter.CTkButton(master=self.frame_left,
                                                 text="Export All Paths",
-                                                command=self.set_marker_event)
+                                                command=self.export_paths_to_file)
         self.button_1.grid(pady=(20, 0), padx=(20, 20), row=6, column=0)
 
         # self.button_2 = customtkinter.CTkButton(master=self.frame_left,
@@ -131,7 +132,7 @@ class App(customtkinter.CTk):
                                                      command=self.clear_markers_and_paths,
                                                      pass_coords=False)
         self.map_widget.add_right_click_menu_command(label="Delete All Rectangles",
-                                                     command=self.map_widget.delete_all_polygon,
+                                                     command=self.clear_paths_and_rectangles,
                                                      pass_coords=False)
         
         self.map_widget.set_position(39.952, -75.192) # EQuad
@@ -153,12 +154,6 @@ class App(customtkinter.CTk):
         current_position = self.map_widget.get_position()
         self.marker_list.append(self.map_widget.set_marker(current_position[0], current_position[1]))
 
-    def clear_markers_and_paths(self):
-        for marker in self.marker_list:
-            marker.delete()
-        for path in self.path_list:
-            path.delete()
-
     def change_appearance_mode(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
 
@@ -175,6 +170,8 @@ class App(customtkinter.CTk):
 
     def start(self):
         self.mainloop()
+
+    # set markers and custom paths
         
     def add_marker_event(self, coord):
         self.marker_list.append(self.map_widget.set_marker(coord[0], coord[1], text=f"waypoint {len(self.marker_list)+1}"))
@@ -182,11 +179,22 @@ class App(customtkinter.CTk):
     def add_path_event(self):
         coordinates = []
         for marker in self.marker_list:
-            # print("marker position: ", marker.position)
             if not marker.deleted:
                 coordinates.append(marker.position)
         coordinates.append(coordinates[0])
         self.path_list.append(self.map_widget.set_path(coordinates, width=3))
+
+    def clear_markers_and_paths(self):
+        for marker in self.marker_list:
+            marker.delete()
+        for path in self.path_list:
+            path.delete()
+
+    def clear_paths_and_rectangles(self):
+        for path in self.path_list:
+            path.delete()
+        for rectangle in self.rectangle_list:
+            rectangle.delete()
 
     # code below is for drawing rectangles / disabling map
 
@@ -231,8 +239,10 @@ class App(customtkinter.CTk):
         (x2, y2) = self.map_widget.convert_canvas_coords_to_decimal_coords(end_x, end_y)
         return [(x1, y1),  (x2, y1), (x2, y2), (x1, y2)]
 
+    # generating paths and exporting them to a file
+
     def generate_paths_for_rectangles(self):
-        turning_radius_ft = 100
+        turning_radius_ft = 400
         for rectangle in self.rectangle_list:
             if not rectangle.deleted:
                 (startx, starty) = rectangle.position_list[0]
@@ -242,6 +252,14 @@ class App(customtkinter.CTk):
                 vertical_path = generate_paths(endx, starty, startx, endy, delta_lat, direction='vertical')
                 self.path_list.append(self.map_widget.set_path(horizontal_path, width=0.5, color="green"))
                 self.path_list.append(self.map_widget.set_path(vertical_path, width=0.5, color="red"))
+
+    def export_paths_to_file(self):
+        num = 1
+        for path in self.path_list:
+            if not path.deleted:
+                file_name = f"path_{num}.waypoints"
+                generate_waypoints(path.position_list, file_name)
+                num += 1
 
 
 if __name__ == "__main__":
