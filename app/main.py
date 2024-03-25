@@ -141,8 +141,6 @@ class App(customtkinter.CTk):
         self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
         self.appearance_mode_optionemenu.set("Light")
 
-        # self.map_widget.bind("<B1-Motion>", self.draw_rect())
-        # self.map_widget.bind("<ButtonRelease-1>", self.draw_rect())
         self.bind("<Button-1>", self.on_first_click)  # First click event
         self.bind("<ButtonRelease-1>", self.on_second_click)  # Second click event (right-click)
         self.bind('<Key>', self.rebind())
