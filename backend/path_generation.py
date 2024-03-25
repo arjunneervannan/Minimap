@@ -102,7 +102,7 @@ def test_paths():
                          title='Vertical Zigzag Path with Rectangle')
 
 
-# Example usage
-delta_lat, delta_lon = feet_to_latlon(5280, 39.9546186)  # 5280 feet at 45 degrees latitude
-print(f"Change in Latitude: {delta_lat} degrees")
-print(f"Change in Longitude: {delta_lon} degrees")
+def test_latlon():
+    delta_lat, delta_lon = feet_to_latlon(5280, 39.9546186)  # 5280 feet at 45 degrees latitude
+    print(f"Change in Latitude: {delta_lat} degrees")
+    print(f"Change in Longitude: {delta_lon} degrees")
