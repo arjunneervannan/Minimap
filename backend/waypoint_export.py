@@ -2,8 +2,9 @@ import os
 
 
 def generate_waypoints(point_list, file_name):
-    file_name = f'../waypoints/{file_name}'
+    file_name = f'./waypoints/{file_name}'
     point_list.append(point_list[0])
+
     with open(file_name, 'w') as f:
         f.write('QGC WPL 110\n')
         f.write(f'0\t0\t3\t16\t0.00000000\t0.00000000\t0.00000000\t0.00000000\t{point_list[0][0]:.8f}'

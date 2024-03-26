@@ -1,6 +1,9 @@
 import customtkinter
 import tkinter
 from tkintermapview import TkinterMapView
+import sys
+sys.path.append('c:/Users/SeniorDesign/Documents/Minimap/')
+
 from backend.path_generation import *
 from backend.waypoint_export import *
 
