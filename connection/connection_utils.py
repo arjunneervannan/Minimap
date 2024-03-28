@@ -70,13 +70,13 @@ def upload_mission(the_connection, mission_items):
 def set_return(the_connection):
     print("--Set Return to Launch")
     the_connection.mav.command_long_send(the_connection.target_system, the_connection.target_component,
-                                        mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0, 0, 0, 0, 0)
+                                        mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0, 0, 0, 0, 0, 0)
     ack(the_connection, "COMMAND_ACK")
 
 def start_mission(the_connection):
     print("-- Mission Start")
     the_connection.mav.command_long_send(the_connection.target_system, the_connection.target_component,
-                                        mavutil.mavlink.MAV_CMD_MISSION_START, 0, 0, 0, 0, 0, 0, 0)
+                                        mavutil.mavlink.MAV_CMD_MISSION_START, 0, 0, 0, 0, 0, 0, 0, 0)
 
     ack(the_connection, "COMMAND_ACK")
 
@@ -102,16 +102,16 @@ if __name__ == "__main__":
 
     upload_mission(the_connection, mission_waypoints)
 
-    arm(the_connection)
+    # arm(the_connection)
 
-    takeoff(the_connection)
+    # takeoff(the_connection)
 
-    start_mission(the_connection)
+    # start_mission(the_connection)
 
-    for mission_item in mission_waypoints:
-        print("Message Read = " + str(the_connection.recv_match(type="MISSION_ITEM_REACHED", condition="MISSION_ITEM_REACHED.seq == {}".format(mission_item.seq), blocking=True)))
+    # for mission_item in mission_waypoints:
+    #     print("Message Read = " + str(the_connection.recv_match(type="MISSION_ITEM_REACHED", condition="MISSION_ITEM_REACHED.seq == {0}".format(mission_item.seq), blocking=True)))
 
-    set_return(the_connection)
+    # set_return(the_connection)
 
 # # Start a connection listening on a UDP port
 # the_connection = mavutil.mavlink_connection('COM6',baud=57600)
