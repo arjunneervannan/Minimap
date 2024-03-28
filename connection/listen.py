@@ -16,9 +16,9 @@ class mission_item:
         self.param2 = 2.0
         self.param3 = 20.0
         self.param4 = math.nan
-        self.x = x
-        self.y = y
-        self.z = z
+        self.param5 = x
+        self.param6 = y
+        self.param7 = z
         self.mission_type = 0  # The MAV_MISSION_TYPE value for MAV_MISSION_TYPE_MISSION
 
 # Arm the Drone
@@ -87,7 +87,8 @@ def ack(the_connection, keyword):
 # Main Function
 if __name__ == "__main__":
     print("-- Program Started")
-    the_connection = mavutil.mavlink_connection('udp:localhost:14540')
+    # the_connection = mavutil.mavlink_connection('udp:localhost:14540')
+    the_connection = mavutil.mavlink_connection('COM6',baud=57600)
 
     while(the_connection.target_system == 0):
         print("-- Checking heartbeat")
@@ -96,8 +97,8 @@ if __name__ == "__main__":
 
     mission_waypoints = []
     mission_waypoints.append(mission_item(0, 0, 42.44312627231835, -83.99860183785319, 10))  # Above takeoff point
-    mission_waypoints.append(mission_item(1, 1, 42.44323746936555, -83.99613245948624, 10))  # Above Destination Point
-    mission_waypoints.append(mission_item(2, 2, 42.44327423746765, -83.99613245948624, 5))   # Destination Point
+    mission_waypoints.append(mission_item(1, 0, 42.44323746936555, -83.99613245948624, 10))  # Above Destination Point
+    mission_waypoints.append(mission_item(2, 0, 42.44327423746765, -83.99613245948624, 5))   # Destination Point
 
     upload_mission(the_connection, mission_waypoints)
 
@@ -112,13 +113,13 @@ if __name__ == "__main__":
 
     set_return(the_connection)
 
-# Start a connection listening on a UDP port
-the_connection = mavutil.mavlink_connection('COM6',baud=57600)
+# # Start a connection listening on a UDP port
+# the_connection = mavutil.mavlink_connection('COM6',baud=57600)
 
-# Wait for the first heartbeat
-#   This sets the system and component ID of remote system for the link
-print("waiting for heartbeat")
-the_connection.wait_heartbeat()
-print("Heartbeat from system (system %u component %u)" % (the_connection.target_system, the_connection.target_component))
+# # Wait for the first heartbeat
+# #   This sets the system and component ID of remote system for the link
+# print("waiting for heartbeat")
+# the_connection.wait_heartbeat()
+# print("Heartbeat from system (system %u component %u)" % (the_connection.target_system, the_connection.target_component))
 
-# Once connected, use 'the_connection' to get and send messages
+# # Once connected, use 'the_connection' to get and send messages
