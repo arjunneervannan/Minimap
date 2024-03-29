@@ -1,4 +1,6 @@
 from __future__ import print_function
+from click import File
+from numpy import block
 from pymavlink import mavutil
 from argparse import ArgumentParser
 import socket
@@ -95,12 +97,76 @@ if __name__ == "__main__":
         the_connection.wait_heartbeat()
         print("-- Heartbeat from system (system " + str(the_connection.target_system) + ") (component " + str(the_connection.target_component) + ")")
 
-    mission_waypoints = []
-    mission_waypoints.append(mission_item(0, 0, 42.44312627231835, -83.99860183785319, 10))  # Above takeoff point
-    mission_waypoints.append(mission_item(1, 0, 42.44323746936555, -83.99613245948624, 10))  # Above Destination Point
-    mission_waypoints.append(mission_item(2, 0, 42.44327423746765, -83.99613245948624, 5))   # Destination Point
+    message = the_connection.mav.command_long_encode(
+        the_connection.target_system,  # Target system ID
+        the_connection.target_component,  # Target component ID
+        mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  # ID of command to send
+        0,  # Confirmation
+        mavutil.mavlink.MAVLINK_MSG_ID_BATTERY_STATUS,  # param1: Message ID to be streamed
+        1000000, # param2: Interval in microseconds
+        0,       # param3 (unused)
+        0,       # param4 (unused)
+        0,       # param5 (unused)
+        0,       # param5 (unused)
+        0        # param6 (unused)
+        )
 
-    upload_mission(the_connection, mission_waypoints)
+    # Send the COMMAND_LONG
+    the_connection.mav.send(message)
+
+    # Wait for a response (blocking) to the MAV_CMD_SET_MESSAGE_INTERVAL command and print result
+    response = the_connection.recv_match(type='COMMAND_ACK', blocking=True)
+    if response and response.command == mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL and response.result == mavutil.mavlink.MAV_RESULT_ACCEPTED:
+        print("Battery Command accepted")
+    else:
+        print("Battery Command failed")
+    
+    message2 = the_connection.mav.command_long_encode(
+        the_connection.target_system,  # Target system ID
+        the_connection.target_component,  # Target component ID
+        mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  # ID of command to send
+        0,  # Confirmation
+        mavutil.mavlink.MAVLINK_MSG_ID_GLOBAL_POSITION_INT,  # param1: Message ID to be streamed
+        100000, # param2: Interval in microseconds
+        0,       # param3 (unused)
+        0,       # param4 (unused)
+        0,       # param5 (unused)
+        0,       # param5 (unused)
+        0        # param6 (unused)
+        )
+    the_connection.mav.send(message2)
+
+    # Wait for a response (blocking) to the MAV_CMD_SET_MESSAGE_INTERVAL command and print result
+    response2 = the_connection.recv_match(type='COMMAND_ACK', blocking=True)
+    if response2 and response2.command == mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL and response2.result == mavutil.mavlink.MAV_RESULT_ACCEPTED:
+        print("GPS Command accepted")
+    else:
+        print("GPS Command failed")
+    
+    num = 0
+    f = open('./connection/log.txt', 'w')
+    while True:
+        message = the_connection.recv_match(blocking=True)
+        if message:
+            
+            f.write(str(message) + "\n")
+            num += 1
+        if num > 200:
+            f.close()
+            break
+        # gps_message = the_connection.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
+        # battery_message = the_connection.recv_match(type='BATTERY_STATUS', blocking=False)
+        # if battery_message:
+        #     print("Battery Message Read: " + str(battery_message))
+        # if gps_message:
+        #     print("GPS Message Read: " + str(gps_message))
+
+    # mission_waypoints = []
+    # mission_waypoints.append(mission_item(0, 0, 42.44312627231835, -83.99860183785319, 10))  # Above takeoff point
+    # mission_waypoints.append(mission_item(1, 0, 42.44323746936555, -83.99613245948624, 10))  # Above Destination Point
+    # mission_waypoints.append(mission_item(2, 0, 42.44327423746765, -83.99613245948624, 5))   # Destination Point
+
+    # upload_mission(the_connection, mission_waypoints)
 
     # arm(the_connection)
 
