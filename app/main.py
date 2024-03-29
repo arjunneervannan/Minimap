@@ -7,7 +7,7 @@ sys.path.append('.')
 from backend.path_generation import *
 from backend.waypoint_export import *
 
-customtkinter.set_default_color_theme("blue")
+customtkinter.set_default_color_theme("green")
 
 
 class App(customtkinter.CTk):
