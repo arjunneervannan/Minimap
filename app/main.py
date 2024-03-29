@@ -8,7 +8,7 @@ from backend.path_generation import *
 from backend.waypoint_export import *
 from connection.connection_utils import *
 
-customtkinter.set_default_color_theme("green")
+customtkinter.set_default_color_theme("blue")
 
 
 class App(customtkinter.CTk):
@@ -66,7 +66,7 @@ class App(customtkinter.CTk):
 
         self.button_1 = customtkinter.CTkButton(master=self.frame_left,
                                                 text="Connect to Drone",
-                                                command=self.connect_to_drone)
+                                                command=self.connect_to_drone())
         self.button_1.grid(pady=(20, 0), padx=(20, 20), row=4, column=0)
 
         self.switch = customtkinter.CTkSwitch(master=self.frame_left,
@@ -155,7 +155,6 @@ class App(customtkinter.CTk):
         self.bind("<ButtonRelease-1>", self.on_second_click)  # Second click event (right-click)
         self.bind('<Key>', self.rebind())
         if self.drone:
-            print("self drone is connected")
             drone_message = self.drone.the_connection.recv_match(blocking=True)
             if drone_message:
                 print(drone_message)
@@ -188,7 +187,6 @@ class App(customtkinter.CTk):
     def connect_to_drone(self):
         if not self.drone:
             self.drone = drone()
-            print("connecting")
             if self.drone.is_connected:
                 print("connected")
                 self.drone.setup_gps_stream()
