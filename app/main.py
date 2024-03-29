@@ -7,6 +7,7 @@ sys.path.append('.')
 from backend.path_generation import *
 from backend.waypoint_export import *
 from connection.connection_utils import *
+from connection.drone_data import *
 
 customtkinter.set_default_color_theme("blue")
 
@@ -21,6 +22,8 @@ class App(customtkinter.CTk):
         super().__init__(*args, **kwargs)
 
         self.drone = None
+        self.drone_data = drone_data()
+
         self.title(App.APP_NAME)
         self.geometry(str(App.WIDTH) + "x" + str(App.HEIGHT))
         self.minsize(App.WIDTH, App.HEIGHT)
@@ -154,10 +157,9 @@ class App(customtkinter.CTk):
         self.bind("<Button-1>", self.on_first_click)  # First click event
         self.bind("<ButtonRelease-1>", self.on_second_click)  # Second click event (right-click)
         self.bind('<Key>', self.rebind())
-        if self.drone:
-            drone_message = self.drone.the_connection.recv_match(blocking=True)
-            if drone_message:
-                print(drone_message)
+
+        self.drone_marker = self.map_widget.set_marker(39.952, -75.192, text=f"drone {1}")
+        self.update_gps()
 
     def search_event(self, event=None):
         self.map_widget.set_address(self.entry.get())
@@ -185,11 +187,44 @@ class App(customtkinter.CTk):
 
     # connecting to drone
     def connect_to_drone(self):
+        print("button was pressed")
         if not self.drone:
             self.drone = drone()
             if self.drone.is_connected:
-                print("connected")
+                print("connecting to drone")
                 self.drone.setup_gps_stream()
+    
+    def update_gps(self):
+        if self.drone:
+            pitch = 0
+            # print("updating gps")
+            drone_message = self.drone.the_connection.recv_match(blocking=True)
+            # drone_message = self.drone.the_connection.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
+            if drone_message:
+                # print(drone_message.get_type())
+                if drone_message.get_type() == 'GLOBAL_POSITION_INT':
+                    lat = drone_message.lat * 1e-7
+                    lon = drone_message.lon * 1e-7
+                    alt = drone_message.alt * 1e-6
+                    print(f"lat: {lat}, lon: {lon}, alt: {alt}")
+                    self.drone_marker.set_position(lat, lon)
+                elif drone_message.get_type() == 'ATTITUDE':
+                    roll = drone_message.roll
+                    pitch = drone_message.pitch
+                    yaw = drone_message.yaw
+                    print(f"roll: {roll}, pitch: {pitch}, yaw: {yaw}")
+                elif drone_message.get_type() == 'VFR_HUD':
+                    groundspeed = drone_message.groundspeed
+                    airspeed = drone_message.airspeed
+                    heading = drone_message.heading
+                    print(f"groundspeed: {groundspeed}, airspeed: {airspeed}, heading: {heading}")
+            # self.drone_data.print_current_state()
+            # self.display_drone()
+            self.after(10, self.update_gps)
+    
+    def display_drone(self):
+        self.map_widget.set_marker(self.drone_data.lat, self.drone_data.lon,
+                                    text=f"drone {self.drone_data.pitch}")
 
     # set markers and custom paths
     def add_marker_event(self, coord):
@@ -272,12 +307,16 @@ class App(customtkinter.CTk):
                 self.path_list.append(self.map_widget.set_path(vertical_path, width=0.5, color="red"))
 
     def export_paths_to_file(self):
-        num = 1
-        for path in self.path_list:
+        if self.drone:
+            path = self.path_list[0]
             if not path.deleted:
-                file_name = f"path_{num}.waypoints"
-                generate_waypoints(path.position_list, file_name)
-                num += 1
+                self.drone.upload_mission(path.position_list)
+        # num = 1
+        # for path in self.path_list:
+        #     if not path.deleted:
+        #         file_name = f"path_{num}.waypoints"
+        #         generate_waypoints(path.position_list, file_name)
+        #         num += 1
 
 
 if __name__ == "__main__":
