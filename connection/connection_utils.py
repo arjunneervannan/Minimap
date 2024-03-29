@@ -113,6 +113,30 @@ class drone:
     def ack(self, keyword):
         print("-- Message Read " + str(self.the_connection.recv_match(type=keyword, blocking=True)))
 
+    def setup_gps_stream(self):
+        gps_message = self.the_connection.mav.command_long_encode(
+            self.the_connection.target_system,  # Target system ID
+            self.the_connection.target_component,  # Target component ID
+            mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  # ID of command to send
+            0,  # Confirmation
+            mavutil.mavlink.MAVLINK_MSG_ID_GLOBAL_POSITION_INT,  # param1: Message ID to be streamed
+            100000,  # param2: Interval in microseconds
+            0,  # param3 (unused)
+            0,  # param4 (unused)
+            0,  # param5 (unused)
+            0,  # param5 (unused)
+            0  # param6 (unused)
+        )
+        self.the_connection.mav.send(gps_message)
+
+        # Wait for a response (blocking) to the MAV_CMD_SET_MESSAGE_INTERVAL command and print result
+        gps_respnse = self.the_connection.recv_match(type='COMMAND_ACK', blocking=True)
+        if gps_respnse and gps_respnse.command == mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL and \
+                gps_respnse.result == mavutil.mavlink.MAV_RESULT_ACCEPTED:
+            print("GPS Command accepted")
+        else:
+            print("GPS Command failed")
+
 
 # Test Functions
 if __name__ == "__main__":

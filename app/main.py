@@ -20,6 +20,7 @@ class App(customtkinter.CTk):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.drone = None
         self.title(App.APP_NAME)
         self.geometry(str(App.WIDTH) + "x" + str(App.HEIGHT))
         self.minsize(App.WIDTH, App.HEIGHT)
@@ -153,6 +154,10 @@ class App(customtkinter.CTk):
         self.bind("<Button-1>", self.on_first_click)  # First click event
         self.bind("<ButtonRelease-1>", self.on_second_click)  # Second click event (right-click)
         self.bind('<Key>', self.rebind())
+        if self.drone:
+            drone_message = self.drone.the_connection.recv_match(blocking=True)
+            if drone_message:
+                print(drone_message)
 
     def search_event(self, event=None):
         self.map_widget.set_address(self.entry.get())
@@ -183,6 +188,7 @@ class App(customtkinter.CTk):
         self.drone = drone()
         if self.drone.is_connected:
             print("connected")
+            self.drone.setup_gps_stream()
 
     # set markers and custom paths
     def add_marker_event(self, coord):
