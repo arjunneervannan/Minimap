@@ -6,6 +6,7 @@ sys.path.append('.')
 
 from backend.path_generation import *
 from backend.waypoint_export import *
+from connection.connection_utils import *
 
 customtkinter.set_default_color_theme("blue")
 
@@ -62,21 +63,26 @@ class App(customtkinter.CTk):
                                                            anchor="w", command=self.clear_markers_and_paths)
         self.drone_config_button.grid(row=2, column=0, sticky="ew")
 
+        self.button_1 = customtkinter.CTkButton(master=self.frame_left,
+                                                text="Connect to Drone",
+                                                command=self.generate_paths_for_rectangles)
+        self.button_1.grid(pady=(20, 0), padx=(20, 20), row=4, column=0)
+
         self.switch = customtkinter.CTkSwitch(master=self.frame_left,
                                               text=f"Draw Rectangle Mode",
                                               variable=self.switch_var,
                                               command=self.switch_event)
-        self.switch.grid(row=4, column=0, padx=(20, 20), pady=(20, 0))
+        self.switch.grid(row=5, column=0, padx=(20, 20), pady=(20, 0))
 
         self.button_1 = customtkinter.CTkButton(master=self.frame_left,
                                                 text="Generate All Paths",
                                                 command=self.generate_paths_for_rectangles)
-        self.button_1.grid(pady=(20, 0), padx=(20, 20), row=5, column=0)
+        self.button_1.grid(pady=(20, 0), padx=(20, 20), row=6, column=0)
 
         self.button_1 = customtkinter.CTkButton(master=self.frame_left,
                                                 text="Export All Paths",
                                                 command=self.export_paths_to_file)
-        self.button_1.grid(pady=(20, 0), padx=(20, 20), row=6, column=0)
+        self.button_1.grid(pady=(20, 0), padx=(20, 20), row=7, column=0)
 
         # self.button_2 = customtkinter.CTkButton(master=self.frame_left,
         #                                         text="Drone Setup",
@@ -93,13 +99,13 @@ class App(customtkinter.CTk):
 
         self.map_option_menu = customtkinter.CTkOptionMenu(self.frame_left, values=["OpenStreetMap", "Google normal", "Google Satellite"],
                                                                        command=self.change_map)
-        self.map_option_menu.grid(row=7, column=0, padx=(20, 20), pady=(10, 0))
+        self.map_option_menu.grid(row=8, column=0, padx=(20, 20), pady=(10, 0))
 
         self.appearance_mode_label = customtkinter.CTkLabel(self.frame_left, text="Appearance Mode:", anchor="w")
-        self.appearance_mode_label.grid(row=8, column=0, padx=(20, 20), pady=(20, 0))
+        self.appearance_mode_label.grid(row=9, column=0, padx=(20, 20), pady=(20, 0))
         self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.frame_left, values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode)
-        self.appearance_mode_optionemenu.grid(row=9, column=0, padx=(20, 20), pady=(10, 20))
+        self.appearance_mode_optionemenu.grid(row=10, column=0, padx=(20, 20), pady=(10, 20))
 
         # ============ frame_right ============
 
@@ -172,8 +178,13 @@ class App(customtkinter.CTk):
     def start(self):
         self.mainloop()
 
+    # connecting to drone
+    def connect_to_drone(self):
+        self.drone = drone()
+        if self.drone.is_connected:
+            print("connected")
+
     # set markers and custom paths
-        
     def add_marker_event(self, coord):
         self.marker_list.append(self.map_widget.set_marker(coord[0], coord[1], text=f"waypoint {len(self.marker_list)+1}"))
         
@@ -198,7 +209,6 @@ class App(customtkinter.CTk):
             rectangle.delete()
 
     # code below is for drawing rectangles / disabling map
-
     def switch_event(self):
         if self.switch_var.get() == 1:
             self.temporarily_unbind()

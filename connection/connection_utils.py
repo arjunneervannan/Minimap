@@ -6,8 +6,9 @@ from argparse import ArgumentParser
 import socket
 import math
 
+
 # Class for formatting the Mission Item.
-class mission_item:
+class missionItem:
     def __init__(self, i, current, x, y, z):
         self.seq = i
         self.frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT  # Use Global Latitude and Longitude for position data
@@ -23,79 +24,107 @@ class mission_item:
         self.param7 = z
         self.mission_type = 0  # The MAV_MISSION_TYPE value for MAV_MISSION_TYPE_MISSION
 
-# Arm the Drone
-def arm(the_connection):
-    print("-- Arming")
-    the_connection.mav.command_long_send(the_connection.target_system, the_connection.target_component,
-                                        mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, 1, 0, 0, 0, 0, 0, 0)
 
-    ack(the_connection, "COMMAND_ACK")
+def heartbeat(connection):
+    while connection.target_system == 0:
+        print("-- Checking heartbeat")
+        connection.wait_heartbeat()
+        return True
 
-# Takeoff the Drone
-def takeoff(the_connection):
-    print("-- Takeoff initiated")
-    the_connection.mav.command_long_send(the_connection.target_system, the_connection.target_component,
-                                        mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, math.nan, 0, 0, 10)
 
-    ack(the_connection, "COMMAND_ACK")
+# drone Class
+class drone:
+    def __init__(self, port='COM6', baudrate=57600, drone_id=1):
+        self.port = port
+        self.baudrate = baudrate
+        self.the_connection = mavutil.mavlink_connection(port, baud=baudrate)
+        self.is_connected = heartbeat(self.the_connection)
+        self.id = drone_id
 
-# Upload the mission items to the drone
-def upload_mission(the_connection, mission_items):
-    n = len(mission_items)
-    print("-- Sending Message out")
-    the_connection.mav.mission_count_send(the_connection.target_system, the_connection.target_component, n, 0)
+    def arm(self):
+        print("-- Arming")
+        self.the_connection.mav.command_long_send(self.the_connection.target_system,
+                                                  self.the_connection.target_component,
+                                                  mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, 1, 0, 0, 0, 0, 0, 0)
 
-    ack(the_connection, "MISSION_REQUEST")
+        self.ack("COMMAND_ACK")
 
-    for waypoint in mission_items:
-        print("-- Creating a waypoint")
-        the_connection.mav.mission_item_send(the_connection.target_system, # Target Syust
-                                             the_connection.target_component, # Target Component
-                                             waypoint.seq, # Sequence
-                                             waypoint.frame, # Frame
-                                             waypoint.command, # Command
-                                             waypoint.current, # Current
-                                             waypoint.autocontinue, # Autocontinue
-                                             waypoint.param1, # Hold Time
-                                             waypoint.param2, # Accept Radius -  how close the drone gets to the waypoint
-                                             waypoint.param3, # Pass Radius - trajectory that the drone will take passing the waypoint
-                                             waypoint.param4, # Yaw - rotation of the drone, angle that the drone will be when it reaches viewpoint. set to NaN
-                                             waypoint.param5, # Local X - Lattitude
-                                             waypoint.param6, # Local Y - Longitude
-                                             waypoint.param7, # Local Z - Altitude
-                                             waypoint.mission_type) # Mission Type
-    if waypoint != mission_items[n-1]:
-        ack(the_connection, "MISSION_REQUEST")
+    # Takeoff the Drone
+    def takeoff(self):
+        print("-- Takeoff initiated")
+        self.the_connection.mav.command_long_send(self.the_connection.target_system,
+                                                  self.the_connection.target_component,
+                                                  mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, math.nan, 0, 0, 10)
 
-    ack(the_connection, "MISSION_ACK")
+        self.ack("COMMAND_ACK")
 
-def set_return(the_connection):
-    print("--Set Return to Launch")
-    the_connection.mav.command_long_send(the_connection.target_system, the_connection.target_component,
-                                        mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0, 0, 0, 0, 0, 0)
-    ack(the_connection, "COMMAND_ACK")
+    # Upload the mission items to the drone
+    def upload_mission(self, mission_items):
+        n = len(mission_items)
+        print("-- Sending Message out")
+        self.the_connection.mav.mission_count_send(self.the_connection.target_system,
+                                                   self.the_connection.target_component, n, 0)
 
-def start_mission(the_connection):
-    print("-- Mission Start")
-    the_connection.mav.command_long_send(the_connection.target_system, the_connection.target_component,
-                                        mavutil.mavlink.MAV_CMD_MISSION_START, 0, 0, 0, 0, 0, 0, 0, 0)
+        self.ack("MISSION_REQUEST")
 
-    ack(the_connection, "COMMAND_ACK")
+        for waypoint in mission_items:
+            print("-- Creating a waypoint")
+            self.the_connection.mav.mission_item_send(self.the_connection.target_system,  # Target System
+                                                      self.the_connection.target_component,  # Target Component
+                                                      waypoint.seq,  # Sequence
+                                                      waypoint.frame,  # Frame
+                                                      waypoint.command,  # Command
+                                                      waypoint.current,  # Current
+                                                      waypoint.autocontinue,  # Autocontinue
+                                                      waypoint.param1,  # Hold Time
+                                                      waypoint.param2,
+                                                      # Accept Radius -  how close the drone gets to the waypoint
+                                                      waypoint.param3,
+                                                      # Pass Radius - trajectory that the drone will take passing the
+                                                      # waypoint
+                                                      waypoint.param4,
+                                                      # Yaw - rotation of the drone, angle that the drone will be
+                                                      # when it reaches viewpoint. set to NaN
+                                                      waypoint.param5,  # Local X - Lattitude
+                                                      waypoint.param6,  # Local Y - Longitude
+                                                      waypoint.param7,  # Local Z - Altitude
+                                                      waypoint.mission_type)  # Mission Type
+            if waypoint != mission_items[n - 1]:
+                self.ack("MISSION_REQUEST")
 
-# Acknowledgement from the Drone
-def ack(the_connection, keyword):
-    print("-- Message Read " + str(the_connection.recv_match(type=keyword, blocking=True)))
+        self.ack("MISSION_ACK")
 
-# Main Function
+    def set_return(self):
+        print("--Set Return to Launch")
+        self.the_connection.mav.command_long_send(self.the_connection.target_system,
+                                                  self.the_connection.target_component,
+                                                  mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0, 0, 0, 0, 0, 0)
+        self.ack("COMMAND_ACK")
+
+    def start_mission(self):
+        print("-- Mission Start")
+        self.the_connection.mav.command_long_send(self.the_connection.target_system,
+                                                  self.the_connection.target_component,
+                                                  mavutil.mavlink.MAV_CMD_MISSION_START, 0, 0, 0, 0, 0, 0, 0, 0)
+
+        self.ack("COMMAND_ACK")
+
+    # Acknowledgement from the Drone
+    def ack(self, keyword):
+        print("-- Message Read " + str(self.the_connection.recv_match(type=keyword, blocking=True)))
+
+
+# Test Functions
 if __name__ == "__main__":
     print("-- Program Started")
     # the_connection = mavutil.mavlink_connection('udp:localhost:14540')
-    the_connection = mavutil.mavlink_connection('COM6',baud=57600)
+    the_connection = mavutil.mavlink_connection('COM6', baud=57600)
 
-    while(the_connection.target_system == 0):
+    while (the_connection.target_system == 0):
         print("-- Checking heartbeat")
         the_connection.wait_heartbeat()
-        print("-- Heartbeat from system (system " + str(the_connection.target_system) + ") (component " + str(the_connection.target_component) + ")")
+        print("-- Heartbeat from system (system " + str(the_connection.target_system) + ") (component " + str(
+            the_connection.target_component) + ")")
 
     message = the_connection.mav.command_long_encode(
         the_connection.target_system,  # Target system ID
@@ -103,13 +132,13 @@ if __name__ == "__main__":
         mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  # ID of command to send
         0,  # Confirmation
         mavutil.mavlink.MAVLINK_MSG_ID_BATTERY_STATUS,  # param1: Message ID to be streamed
-        1000000, # param2: Interval in microseconds
-        0,       # param3 (unused)
-        0,       # param4 (unused)
-        0,       # param5 (unused)
-        0,       # param5 (unused)
-        0        # param6 (unused)
-        )
+        1000000,  # param2: Interval in microseconds
+        0,  # param3 (unused)
+        0,  # param4 (unused)
+        0,  # param5 (unused)
+        0,  # param5 (unused)
+        0  # param6 (unused)
+    )
 
     # Send the COMMAND_LONG
     the_connection.mav.send(message)
@@ -120,20 +149,20 @@ if __name__ == "__main__":
         print("Battery Command accepted")
     else:
         print("Battery Command failed")
-    
+
     message2 = the_connection.mav.command_long_encode(
         the_connection.target_system,  # Target system ID
         the_connection.target_component,  # Target component ID
         mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,  # ID of command to send
         0,  # Confirmation
         mavutil.mavlink.MAVLINK_MSG_ID_GLOBAL_POSITION_INT,  # param1: Message ID to be streamed
-        100000, # param2: Interval in microseconds
-        0,       # param3 (unused)
-        0,       # param4 (unused)
-        0,       # param5 (unused)
-        0,       # param5 (unused)
-        0        # param6 (unused)
-        )
+        100000,  # param2: Interval in microseconds
+        0,  # param3 (unused)
+        0,  # param4 (unused)
+        0,  # param5 (unused)
+        0,  # param5 (unused)
+        0  # param6 (unused)
+    )
     the_connection.mav.send(message2)
 
     # Wait for a response (blocking) to the MAV_CMD_SET_MESSAGE_INTERVAL command and print result
@@ -142,13 +171,12 @@ if __name__ == "__main__":
         print("GPS Command accepted")
     else:
         print("GPS Command failed")
-    
+
     num = 0
     f = open('./connection/log.txt', 'w')
     while True:
         message = the_connection.recv_match(blocking=True)
         if message:
-            
             f.write(str(message) + "\n")
             num += 1
         if num > 200:
