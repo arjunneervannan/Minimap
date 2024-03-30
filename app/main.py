@@ -304,12 +304,15 @@ class App(customtkinter.CTk):
 
     def export_paths_to_file(self):
         print("exporting paths to file")
-        if self.drone:
-            path = self.path_list[0]
-            if not path.deleted:
-                self.drone.upload_mission(path.position_list)
-                file_name = f"path_1.waypoints"
-                generate_waypoints(path.position_list, file_name)
+        path = self.path_list[0]
+        if not path.deleted:
+            # self.drone.upload_mission(path.position_list)
+            file_name = "path_1.waypoints"
+            print(path.position_list)
+            file_name = f'./waypoints/{file_name}'
+            with open(file_name, 'w') as f:
+                f.write(str(path.position_list))
+            generate_waypoints(path.position_list, file_name)
         # num = 1
         # for path in self.path_list:
         #     if not path.deleted:
