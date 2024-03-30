@@ -67,15 +67,15 @@ class App(customtkinter.CTk):
                                                            anchor="w", command=self.clear_markers_and_paths)
         self.drone_config_button.grid(row=2, column=0, sticky="ew")
 
-        self.arm_drone_button = customtkinter.CTkButton(master=self.frame_left,
-                                                text="Arm Drone",
-                                                command=self.arm_drone())
-        self.arm_drone_button.grid(pady=(20, 0), padx=(20, 20), row=4, column=0)
+        # self.arm_drone_button = customtkinter.CTkButton(master=self.frame_left,
+        #                                         text="Arm Drone",
+        #                                         command=self.arm_drone())
+        # self.arm_drone_button.grid(pady=(20, 0), padx=(20, 20), row=4, column=0)
 
-        self.drone_connect_button = customtkinter.CTkButton(master=self.frame_left,
-                                                text="Connect to Drone",
-                                                command=self.connect_to_drone())
-        self.drone_connect_button.grid(pady=(20, 0), padx=(20, 20), row=5, column=0)
+        # self.drone_connect_button = customtkinter.CTkButton(master=self.frame_left,
+        #                                         text="Connect to Drone",
+        #                                         command=self.connect_to_drone())
+        # self.drone_connect_button.grid(pady=(20, 0), padx=(20, 20), row=5, column=0)
 
         self.switch = customtkinter.CTkSwitch(master=self.frame_left,
                                               text=f"Draw Rectangle Mode",
@@ -92,19 +92,6 @@ class App(customtkinter.CTk):
                                                 text="Export All Paths",
                                                 command=self.export_paths_to_file)
         self.export_button.grid(pady=(20, 0), padx=(20, 20), row=8, column=0)
-
-        # self.button_2 = customtkinter.CTkButton(master=self.frame_left,
-        #                                         text="Drone Setup",
-        #                                         command=self.clear_marker_event)
-        # self.button_2.grid(pady=(20, 0), padx=(20, 20), row=1, column=0)
-        
-        # self.button_3 = customtkinter.CTkButton(master=self.frame_left,
-        #                                         text="Plan Mission",
-        #                                         command=self.clear_marker_event)
-        # self.button_3.grid(pady=(20, 0), padx=(20, 20), row=2, column=0)
-
-        # self.map_label = customtkinter.CTkLabel(self.frame_left, text="Tile Server:", anchor="w")
-        # self.map_label.grid(row=4, column=0, padx=(20, 20), pady=(20, 0))
 
         self.map_option_menu = customtkinter.CTkOptionMenu(self.frame_left, values=["OpenStreetMap", "Google normal", "Google Satellite"],
                                                                        command=self.change_map)
@@ -316,6 +303,7 @@ class App(customtkinter.CTk):
                 self.path_list.append(self.map_widget.set_path(vertical_path, width=0.5, color="red"))
 
     def export_paths_to_file(self):
+        print("exporting paths to file")
         if self.drone:
             path = self.path_list[0]
             if not path.deleted:
