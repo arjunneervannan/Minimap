@@ -15,13 +15,13 @@ class missionItem:
         self.command = mavutil.mavlink.MAV_CMD_NAV_WAYPOINT  # Move to the waypoint
         self.current = current
         self.autocontinue = 0
-        self.param1 = 0.0
-        self.param2 = 2.0
-        self.param3 = 20.0
-        self.param4 = math.nan
-        self.param5 = x
-        self.param6 = y
-        self.param7 = z
+        self.param1 = 0.0 # hold time
+        self.param2 = 10.0 # Acceptance radius
+        self.param3 = 0.0 # pass radius
+        self.param4 = math.nan # not using
+        self.param5 = x # lat
+        self.param6 = y # lon
+        self.param7 = z # altitude
         self.mission_type = 0  # The MAV_MISSION_TYPE value for MAV_MISSION_TYPE_MISSION
 
 
@@ -32,21 +32,83 @@ def heartbeat(connection):
         return True
 
 
+def convert_positions_to_mission_items(positions):
+    mission_items = []
+    curr_altitude = 60
+
+    i = 0
+
+    home_waypoint = missionItem(i, 0, positions[0][0], positions[0][1], 20)
+    mission_items.append(home_waypoint)
+
+    i += 1
+
+    takeoff = missionItem(i, 0, 0, 0, curr_altitude / 2)
+    takeoff.param1 = 15
+    takeoff.command = mavutil.mavlink.MAV_CMD_NAV_TAKEOFF
+    mission_items.append(takeoff)
+
+    i += 1
+
+    for j, position in enumerate(positions):
+        if j >= len(positions) - 5:
+            curr_altitude -= 10
+        mission_items.append(missionItem(i, 0, position[0], position[1], curr_altitude))
+        i += 1
+    
+    landing = missionItem(i, 0, positions[0][0], positions[0][1], 1)
+    landing.command = mavutil.mavlink.MAV_CMD_NAV_LAND
+    landing.param1 = 0
+    mission_items.append(landing)
+
+    return mission_items
+
+
 # drone Class
 class drone:
     def __init__(self, port='COM6', baudrate=57600, drone_id=1):
         self.port = port
         self.baudrate = baudrate
-        self.the_connection = mavutil.mavlink_connection(port, baud=baudrate)
-        self.is_connected = heartbeat(self.the_connection)
         self.id = drone_id
 
+    def connect(self):
+        self.the_connection = mavutil.mavlink_connection(self.port, baud=self.baudrate)
+        self.is_connected = heartbeat(self.the_connection)
+    
     def arm(self):
         print("-- Arming")
         self.the_connection.mav.command_long_send(self.the_connection.target_system,
                                                   self.the_connection.target_component,
-                                                  mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, 1, 0, 0, 0, 0, 0, 0)
+                                                  mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+                                                  0, 1, 0, 0, 0, 0, 0, 0)
 
+        self.ack("COMMAND_ACK")
+    
+    def set_rc_channel_pwm(self, channel_id, pwm=1500):
+        """ Set RC channel pwm value
+        Args:
+            channel_id (TYPE): Channel ID
+            pwm (int, optional): Channel pwm value 1100-1900
+        """
+        if channel_id < 1 or channel_id > 18:
+            print("Channel does not exist.")
+            return
+
+        # Mavlink 2 supports up to 18 channels:
+        # https://mavlink.io/en/messages/common.html#RC_CHANNELS_OVERRIDE
+        rc_channel_values = [65535 for _ in range(18)]
+        rc_channel_values[channel_id - 1] = pwm
+        self.the_connection.mav.rc_channels_override_send(
+            self.the_connection.target_system,                # target_system
+            self.the_connection.target_component,             # target_component
+            *rc_channel_values)                  # RC channel list, in microseconds.
+        
+    def pre_arm_checks(self):
+        print("--Running Pre-arm checks")
+        self.the_connection.mav.command_long_send(self.the_connection.target_system,
+                                                self.the_connection.target_component,
+                                                mavutil.mavlink.MAV_CMD_RUN_PREARM_CHECKS, 
+                                                0, 0, 0, 0, 0, 0, 0, 0)
         self.ack("COMMAND_ACK")
 
     # Takeoff the Drone
@@ -54,7 +116,8 @@ class drone:
         print("-- Takeoff initiated")
         self.the_connection.mav.command_long_send(self.the_connection.target_system,
                                                   self.the_connection.target_component,
-                                                  mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, math.nan, 0, 0, 10)
+                                                  mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+                                                  15, 0, 0, 0, 0, 0, 0, 30)
 
         self.ack("COMMAND_ACK")
 
@@ -69,6 +132,7 @@ class drone:
 
         for waypoint in mission_items:
             print("-- Creating a waypoint")
+            print("seq: ", waypoint.seq)
             self.the_connection.mav.mission_item_send(self.the_connection.target_system,  # Target System
                                                       self.the_connection.target_component,  # Target Component
                                                       waypoint.seq,  # Sequence
@@ -93,7 +157,7 @@ class drone:
                 self.ack("MISSION_REQUEST")
 
         self.ack("MISSION_ACK")
-
+    
     def set_return(self):
         print("--Set Return to Launch")
         self.the_connection.mav.command_long_send(self.the_connection.target_system,
@@ -108,6 +172,114 @@ class drone:
                                                   mavutil.mavlink.MAV_CMD_MISSION_START, 0, 0, 0, 0, 0, 0, 0, 0)
 
         self.ack("COMMAND_ACK")
+    
+    # test bench to run various functions
+    def test(self):
+        print("-- Running Test Sequence")
+        print("-- Sending Mission Message out")
+        self.the_connection.mav.mission_count_send(self.the_connection.target_system,
+                                                   self.the_connection.target_component, 4, 0)
+        
+        self.ack("MISSION_REQUEST")
+
+        # self.the_connection.mav.command_long_send(self.the_connection.target_system,
+        #                                     self.the_connection.target_component,
+        #                                     mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+        #                                     15, 0, 0, 0, 0, 0, 0, 30)
+        
+        # self.ack("MISSION_REQUEST")
+
+        # self.the_connection.mav.command_long_send(self.the_connection.target_system,
+        #                                           self.the_connection.target_component,
+        #                                             mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+        #                                             0, 30, 0, 0, 0, 0,
+        #                                             39.95341460622441, -75.18878982390572, 30)
+
+        self.the_connection.mav.mission_item_send(self.the_connection.target_system,  # Target System
+                                                  self.the_connection.target_component,  # Target Component
+                                                  0, # Sequence
+                                                  mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, # Frame
+                                                  mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,  # Command
+                                                  0, # Current
+                                                  0, # Autocontinue
+                                                  15, # pitch angle
+                                                  30, # not using
+                                                  0, # not using
+                                                  0, # not using
+                                                  39.95341460622441, # lat
+                                                  -75.18878982390572, # lon
+                                                  30, # alt,
+                                                  0 # mission type
+        )
+
+        self.ack("MISSION_REQUEST")
+
+        self.the_connection.mav.mission_item_send(self.the_connection.target_system,  # Target System
+                                                  self.the_connection.target_component,  # Target Component
+                                                  1, # Sequence
+                                                  mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, # Frame
+                                                  mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,  # Command
+                                                  0, # Current
+                                                  0, # Autocontinue
+                                                  15, # pitch angle
+                                                  0, # not using
+                                                  0, # not using
+                                                  0, # not using
+                                                  0, # lat - not using
+                                                  0, # lon - not using
+                                                  30, # alt,
+                                                  0 # mission type
+        )
+
+        self.ack("MISSION_REQUEST")
+
+        self.the_connection.mav.mission_item_send(self.the_connection.target_system,  # Target System
+                                                  self.the_connection.target_component,  # Target Component
+                                                  2, # Sequence
+                                                  mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, # Frame
+                                                  mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,  # Command
+                                                  0, # Current
+                                                  0, # Autocontinue
+                                                  15, # not using this
+                                                  30, # acc radius
+                                                  0, # pass radius
+                                                  0, # param 4 - not using this
+                                                  39.95341460622441, # lat
+                                                  -75.18878982390572, # lon
+                                                  30, # alt,
+                                                  0 # mission type
+        )
+
+        self.ack("MISSION_REQUEST")
+
+        self.the_connection.mav.mission_item_send(self.the_connection.target_system,  # Target System
+                                                  self.the_connection.target_component,  # Target Component
+                                                  3, # Sequence
+                                                  mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, # Frame
+                                                  mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,  # Command
+                                                  0, # Current
+                                                  0, # Autocontinue
+                                                  0, # not using this
+                                                  30, # acc radius
+                                                  0, # pass radius
+                                                  0, # param 4 - not using this
+                                                  39.95423703825388, # lat
+                                                  -75.18655822600533, # lon
+                                                  30, # alt,
+                                                  0 # mission type
+        )
+
+        self.ack("MISSION_ACK")
+
+    def clear_mission(self):
+        print("-- Clearing Mission")
+        self.the_connection.mav.mission_clear_all_send(self.the_connection.target_system, 
+                                                       self.the_connection.target_component)
+        self.ack("MISSION_ACK")
+    
+    def auto(self):
+        print("-- Setting to Auto Mode")
+        self.the_connection.set_mode_auto()
 
     # Acknowledgement from the Drone
     def ack(self, keyword):

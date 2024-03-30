@@ -2,6 +2,7 @@ import customtkinter
 import tkinter
 from tkintermapview import TkinterMapView
 import sys
+import pickle as pkl
 sys.path.append('.')
 
 from backend.path_generation import *
@@ -307,12 +308,12 @@ class App(customtkinter.CTk):
         path = self.path_list[0]
         if not path.deleted:
             # self.drone.upload_mission(path.position_list)
-            file_name = "path_1.waypoints"
+            file_name = "path_1.pkl"
             print(path.position_list)
             file_name = f'./waypoints/{file_name}'
-            with open(file_name, 'w') as f:
-                f.write(str(path.position_list))
-            generate_waypoints(path.position_list, file_name)
+            with open(file_name, 'wb') as f:
+                pkl.dump(path.position_list, f)
+            # generate_waypoints(path.position_list, file_name)
         # num = 1
         # for path in self.path_list:
         #     if not path.deleted:
