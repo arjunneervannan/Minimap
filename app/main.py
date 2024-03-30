@@ -67,26 +67,31 @@ class App(customtkinter.CTk):
                                                            anchor="w", command=self.clear_markers_and_paths)
         self.drone_config_button.grid(row=2, column=0, sticky="ew")
 
-        self.button_1 = customtkinter.CTkButton(master=self.frame_left,
+        self.arm_drone_button = customtkinter.CTkButton(master=self.frame_left,
+                                                text="Arm Drone",
+                                                command=self.arm_drone())
+        self.arm_drone_button.grid(pady=(20, 0), padx=(20, 20), row=4, column=0)
+
+        self.drone_connect_button = customtkinter.CTkButton(master=self.frame_left,
                                                 text="Connect to Drone",
                                                 command=self.connect_to_drone())
-        self.button_1.grid(pady=(20, 0), padx=(20, 20), row=4, column=0)
+        self.drone_connect_button.grid(pady=(20, 0), padx=(20, 20), row=5, column=0)
 
         self.switch = customtkinter.CTkSwitch(master=self.frame_left,
                                               text=f"Draw Rectangle Mode",
                                               variable=self.switch_var,
                                               command=self.switch_event)
-        self.switch.grid(row=5, column=0, padx=(20, 20), pady=(20, 0))
+        self.switch.grid(row=6, column=0, padx=(20, 20), pady=(20, 0))
 
-        self.button_1 = customtkinter.CTkButton(master=self.frame_left,
+        self.generate_button = customtkinter.CTkButton(master=self.frame_left,
                                                 text="Generate All Paths",
                                                 command=self.generate_paths_for_rectangles)
-        self.button_1.grid(pady=(20, 0), padx=(20, 20), row=6, column=0)
+        self.generate_button.grid(pady=(20, 0), padx=(20, 20), row=7, column=0)
 
-        self.button_1 = customtkinter.CTkButton(master=self.frame_left,
+        self.export_button = customtkinter.CTkButton(master=self.frame_left,
                                                 text="Export All Paths",
                                                 command=self.export_paths_to_file)
-        self.button_1.grid(pady=(20, 0), padx=(20, 20), row=7, column=0)
+        self.export_button.grid(pady=(20, 0), padx=(20, 20), row=8, column=0)
 
         # self.button_2 = customtkinter.CTkButton(master=self.frame_left,
         #                                         text="Drone Setup",
@@ -103,13 +108,14 @@ class App(customtkinter.CTk):
 
         self.map_option_menu = customtkinter.CTkOptionMenu(self.frame_left, values=["OpenStreetMap", "Google normal", "Google Satellite"],
                                                                        command=self.change_map)
-        self.map_option_menu.grid(row=8, column=0, padx=(20, 20), pady=(10, 0))
+        self.map_option_menu.grid(row=9, column=0, padx=(20, 20), pady=(10, 0))
 
         self.appearance_mode_label = customtkinter.CTkLabel(self.frame_left, text="Appearance Mode:", anchor="w")
-        self.appearance_mode_label.grid(row=9, column=0, padx=(20, 20), pady=(20, 0))
+        self.appearance_mode_label.grid(row=10, column=0, padx=(20, 20), pady=(20, 0))
+
         self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.frame_left, values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode)
-        self.appearance_mode_optionemenu.grid(row=10, column=0, padx=(20, 20), pady=(10, 20))
+        self.appearance_mode_optionemenu.grid(row=11, column=0, padx=(20, 20), pady=(10, 20))
 
         # ============ frame_right ============
 
@@ -194,6 +200,9 @@ class App(customtkinter.CTk):
                 print("connecting to drone")
                 self.drone.setup_gps_stream()
     
+    def arm_drone(self):
+        print("arming drone")
+    
     def update_gps(self):
         if self.drone:
             pitch = 0
@@ -206,18 +215,18 @@ class App(customtkinter.CTk):
                     lat = drone_message.lat * 1e-7
                     lon = drone_message.lon * 1e-7
                     alt = drone_message.alt * 1e-6
-                    print(f"lat: {lat}, lon: {lon}, alt: {alt}")
+                    # print(f"lat: {lat}, lon: {lon}, alt: {alt}")
                     self.drone_marker.set_position(lat, lon)
                 elif drone_message.get_type() == 'ATTITUDE':
                     roll = drone_message.roll
                     pitch = drone_message.pitch
                     yaw = drone_message.yaw
-                    print(f"roll: {roll}, pitch: {pitch}, yaw: {yaw}")
+                    # print(f"roll: {roll}, pitch: {pitch}, yaw: {yaw}")
                 elif drone_message.get_type() == 'VFR_HUD':
                     groundspeed = drone_message.groundspeed
                     airspeed = drone_message.airspeed
                     heading = drone_message.heading
-                    print(f"groundspeed: {groundspeed}, airspeed: {airspeed}, heading: {heading}")
+                    # print(f"groundspeed: {groundspeed}, airspeed: {airspeed}, heading: {heading}")
             # self.drone_data.print_current_state()
             # self.display_drone()
             self.after(10, self.update_gps)
@@ -311,6 +320,8 @@ class App(customtkinter.CTk):
             path = self.path_list[0]
             if not path.deleted:
                 self.drone.upload_mission(path.position_list)
+                file_name = f"path_1.waypoints"
+                generate_waypoints(path.position_list, file_name)
         # num = 1
         # for path in self.path_list:
         #     if not path.deleted:
