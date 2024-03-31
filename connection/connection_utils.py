@@ -1,6 +1,10 @@
 from __future__ import print_function
 from click import File
 from numpy import block
+import os
+os.environ['MAVLINK20'] = ''
+
+
 from pymavlink import mavutil
 from argparse import ArgumentParser
 import socket
@@ -81,6 +85,19 @@ class drone:
                                                   self.the_connection.target_component,
                                                   mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
                                                   0, 1, 0, 0, 0, 0, 0, 0)
+        
+        # print("Waiting for the vehicle to arm")
+        # self.the_connection.motors_armed_wait()
+        # print('Armed!')
+
+        self.ack("COMMAND_ACK")
+    
+    def disarm(self):
+        print("-- Arming")
+        self.the_connection.mav.command_long_send(self.the_connection.target_system,
+                                                  self.the_connection.target_component,
+                                                  mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+                                                  0, 0, 0, 0, 0, 0, 0, 0)
 
         self.ack("COMMAND_ACK")
     
@@ -102,6 +119,7 @@ class drone:
             self.the_connection.target_system,                # target_system
             self.the_connection.target_component,             # target_component
             *rc_channel_values)                  # RC channel list, in microseconds.
+        self.ack("HEARTBEAT")
         
     def pre_arm_checks(self):
         print("--Running Pre-arm checks")
@@ -274,11 +292,6 @@ class drone:
 
     def clear_mission(self):
         print("-- Clearing Mission")
-        # self.the_connection.mav.command_long_send(self.the_connection.target_system,
-        #                                   self.the_connection.target_component,
-        #                                   mavutil.mavlink.MISSION_CLEAR_ALL,
-        #                                   0, 0, 0, 0, 0, 0, 0,
-        #                                   0)
         self.the_connection.mav.mission_clear_all_send(self.the_connection.target_system, 
                                                        self.the_connection.target_component)
         self.ack("MISSION_ACK")
@@ -286,7 +299,16 @@ class drone:
     def auto(self):
         print("-- Setting to Auto Mode")
         self.the_connection.set_mode_auto()
+    
+    def get_flight_mode(self):
+        print("-- Getting Flight Mode")
 
+        msg = self.the_connection.recv_match(type = 'HEARTBEAT', blocking = True)
+        if msg:
+            mode = mavutil.mode_string_v10(msg)
+            print("-- Flight Mode: " + mode)
+            print("-- System Status: " + str(msg))
+    
     # Acknowledgement from the Drone
     def ack(self, keyword):
         print("-- Message Read " + str(self.the_connection.recv_match(type=keyword, blocking=True)))

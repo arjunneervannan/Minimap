@@ -21,7 +21,21 @@ def main():
                 mission_items = convert_positions_to_mission_items(path) # includes takeoff and landing
                 the_drone.upload_mission(mission_items)
             elif command == "auto":
-                the_drone.set_rc_channel_pwm(5, 1900)
+                the_drone.auto()
+            elif command == "disarm":
+                the_drone.disarm()
+            elif command == "mode":
+                the_drone.get_flight_mode()
+            elif command == "stream":
+                while True:
+                    try:
+                        msg = the_drone.the_connection.recv_match(type="HEARTBEAT", blocking=True)
+                        mode = mavutil.mode_string_v10(msg)
+                        print("-- Flight Mode: " + mode)
+                    except KeyboardInterrupt:
+                        print("Program terminated by user")
+                        break
+
             elif command == "prearm":
                 the_drone.pre_arm_checks()
             elif command == "start":
