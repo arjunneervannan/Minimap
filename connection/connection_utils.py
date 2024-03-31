@@ -109,6 +109,7 @@ class drone:
                                                 self.the_connection.target_component,
                                                 mavutil.mavlink.MAV_CMD_RUN_PREARM_CHECKS, 
                                                 0, 0, 0, 0, 0, 0, 0, 0)
+        self.ack("COMMAND_ACK")
         self.ack("SYS_STATUS")
 
     # Takeoff the Drone
@@ -168,7 +169,8 @@ class drone:
         print("-- Mission Start")
         self.the_connection.mav.command_long_send(self.the_connection.target_system,
                                                   self.the_connection.target_component,
-                                                  mavutil.mavlink.MAV_CMD_MISSION_START, 0, 0, 0, 0, 0, 0, 0, 0)
+                                                  mavutil.mavlink.MAV_CMD_MISSION_START,
+                                                  1, 0, 0, 0, 0, 0, 0, 0)
 
         self.ack("COMMAND_ACK")
     
@@ -272,6 +274,11 @@ class drone:
 
     def clear_mission(self):
         print("-- Clearing Mission")
+        # self.the_connection.mav.command_long_send(self.the_connection.target_system,
+        #                                   self.the_connection.target_component,
+        #                                   mavutil.mavlink.MISSION_CLEAR_ALL,
+        #                                   0, 0, 0, 0, 0, 0, 0,
+        #                                   0)
         self.the_connection.mav.mission_clear_all_send(self.the_connection.target_system, 
                                                        self.the_connection.target_component)
         self.ack("MISSION_ACK")
