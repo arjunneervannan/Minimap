@@ -21,9 +21,11 @@ def main():
                 mission_items = convert_positions_to_mission_items(path) # includes takeoff and landing
                 the_drone.upload_mission(mission_items)
             elif command == "auto":
-                the_drone.auto()
+                the_drone.set_rc_channel_pwm(5, 1900)
             elif command == "prearm":
                 the_drone.pre_arm_checks()
+            elif command == "start":
+                the_drone.start_mission()
             elif command == "test":
                 the_drone.test()
             else:

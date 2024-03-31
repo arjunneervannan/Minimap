@@ -109,7 +109,7 @@ class drone:
                                                 self.the_connection.target_component,
                                                 mavutil.mavlink.MAV_CMD_RUN_PREARM_CHECKS, 
                                                 0, 0, 0, 0, 0, 0, 0, 0)
-        self.ack("COMMAND_ACK")
+        self.ack("SYS_STATUS")
 
     # Takeoff the Drone
     def takeoff(self):
@@ -132,7 +132,6 @@ class drone:
 
         for waypoint in mission_items:
             print("-- Creating a waypoint")
-            print("seq: ", waypoint.seq)
             self.the_connection.mav.mission_item_send(self.the_connection.target_system,  # Target System
                                                       self.the_connection.target_component,  # Target Component
                                                       waypoint.seq,  # Sequence
