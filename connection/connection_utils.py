@@ -55,8 +55,9 @@ def convert_positions_to_mission_items(positions):
     i += 1
 
     for j, position in enumerate(positions):
-        if j >= len(positions) - 5:
-            curr_altitude -= 10
+        if j >= len(positions) - 6:
+            if curr_altitude >= 10:
+                curr_altitude -= 10
         mission_items.append(missionItem(i, 0, position[0], position[1], curr_altitude))
         i += 1
     

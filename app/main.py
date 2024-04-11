@@ -153,7 +153,7 @@ class App(customtkinter.CTk):
         self.bind('<Key>', self.rebind())
 
         self.drone_marker = self.map_widget.set_marker(39.952, -75.192, text=f"drone {1}")
-        self.update_gps()
+        # self.update_gps()
 
     def search_event(self, event=None):
         self.map_widget.set_address(self.entry.get())
@@ -292,7 +292,7 @@ class App(customtkinter.CTk):
     # generating paths and exporting them to a file
 
     def generate_paths_for_rectangles(self):
-        turning_radius_ft = 400
+        turning_radius_ft = 150
         for rectangle in self.rectangle_list:
             if not rectangle.deleted:
                 (startx, starty) = rectangle.position_list[0]
@@ -305,14 +305,14 @@ class App(customtkinter.CTk):
 
     def export_paths_to_file(self):
         print("exporting paths to file")
-        path = self.path_list[0]
-        if not path.deleted:
-            # self.drone.upload_mission(path.position_list)
-            file_name = "path_1.pkl"
-            print(path.position_list)
-            file_name = f'./waypoints/{file_name}'
-            with open(file_name, 'wb') as f:
-                pkl.dump(path.position_list, f)
+        for i, path in enumerate(self.path_list):
+            if not path.deleted:
+                # self.drone.upload_mission(path.position_list)
+                file_name = f"path_{i}.pkl"
+                print(path.position_list)
+                file_name = f'./waypoints/{file_name}'
+                with open(file_name, 'wb') as f:
+                    pkl.dump(path.position_list, f)
             # generate_waypoints(path.position_list, file_name)
         # num = 1
         # for path in self.path_list:
