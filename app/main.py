@@ -1,18 +1,16 @@
 import customtkinter
 import tkinter
-from tkinter import *
-from networkx import is_connected
 from tkintermapview import TkinterMapView
 import sys
 import pickle as pkl
-import cv2
+from tkinter import messagebox
+from tkinter import simpledialog
+
 sys.path.append('.')
 
-from backend.path_generation import *
-from backend.waypoint_export import *
-from connection.connection_utils import *
+from connection.path_generation import *
+from connection.drone_connection import *
 from connection.drone_data import *
-from video_capture import *
 
 customtkinter.set_default_color_theme("blue")
 
@@ -28,6 +26,8 @@ class App(customtkinter.CTk):
 
         self.drone = drone()
         self.drone_data = drone_data()
+
+        self.home = None
 
         self.title(App.APP_NAME)
         self.geometry(str(App.WIDTH) + "x" + str(App.HEIGHT))
@@ -61,16 +61,11 @@ class App(customtkinter.CTk):
         
         self.app_name = customtkinter.CTkLabel(self.frame_left, text="MiniMap", anchor="w")
         self.app_name.grid(row=0, column=0, padx=(20, 20), pady=(20, 0))
-        
-        # self.home_button = customtkinter.CTkButton(self.frame_left, corner_radius=0, height=40, border_spacing=10, text="Home",
-        #                                            fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
-        #                                            anchor="w", command=self.connect_to_drone)
-        # self.home_button.grid(row=1, column=0, sticky="ew")
 
-        # self.drone_config_button = customtkinter.CTkButton(self.frame_left, corner_radius=0, height=40, border_spacing=10, text="Drone Config",
-        #                                                    fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
-        #                                                    anchor="w", command=self.clear_markers_and_paths)
-        # self.drone_config_button.grid(row=2, column=0, sticky="ew")
+        self.arm_drone_button = customtkinter.CTkButton(master=self.frame_left,
+                                                        text="Upload Mission",
+                                                        command=self.upload_mission)
+        self.arm_drone_button.grid(pady=(20, 0), padx=(20, 20), row=3, column=0)
 
         self.arm_drone_button = customtkinter.CTkButton(master=self.frame_left,
                                                 text="Start Mission",
@@ -119,10 +114,16 @@ class App(customtkinter.CTk):
 
         self.map_widget = TkinterMapView(self.frame_right, corner_radius=0)
         self.map_widget.grid(row=0, rowspan=1, column=0, columnspan=3, sticky="nswe", padx=(0, 0), pady=(0, 0))
-        
+
+        self.map_widget.add_right_click_menu_command(label="Set Home Here",
+                                                     command=self.add_home_event,
+                                                     pass_coords=True)
+        self.map_widget.add_right_click_menu_command(label="Remove Home",
+                                                     command=self.remove_home_event,
+                                                     pass_coords=False)
         self.map_widget.add_right_click_menu_command(label="Add Custom Waypoint",
-                                        command=self.add_marker_event,
-                                        pass_coords=True)
+                                                     command=self.add_waypoint_event,
+                                                     pass_coords=True)
         self.map_widget.add_right_click_menu_command(label="Generate Flight Path",
                                         command=self.add_path_event,
                                         pass_coords=False)
@@ -143,15 +144,15 @@ class App(customtkinter.CTk):
         self.bind("<ButtonRelease-1>", self.on_second_click)  # Second click event (right-click)
         self.bind('<Key>', self.rebind())
 
-        self.drone_marker = self.map_widget.set_marker(39.952, -75.192, text=f"drone {1}")
+        # self.drone_marker = self.map_widget.set_marker(39.952, -75.192, text=f"drone {1}")
         # self.update_gps()
 
     # def search_event(self, event=None):
     #     self.map_widget.set_address(self.entry.get())
 
-    def set_marker_event(self):
-        current_position = self.map_widget.get_position()
-        self.marker_list.append(self.map_widget.set_marker(current_position[0], current_position[1]))
+    # def set_marker_event(self):
+    #     current_position = self.map_widget.get_position()
+    #     self.marker_list.append(self.map_widget.set_marker(current_position[0], current_position[1]))
 
     def change_appearance_mode(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
@@ -224,8 +225,9 @@ class App(customtkinter.CTk):
                                     text=f"drone {self.drone_data.pitch}")
 
     # set markers and custom paths
-    def add_marker_event(self, coord):
-        self.marker_list.append(self.map_widget.set_marker(coord[0], coord[1], text=f"waypoint {len(self.marker_list)+1}"))
+    def add_waypoint_event(self, coord):
+        self.marker_list.append(self.map_widget.set_marker(coord[0], coord[1],
+                                                           text=f"waypoint {len(self.marker_list)+1}"))
         
     def add_path_event(self):
         coordinates = []
@@ -234,6 +236,17 @@ class App(customtkinter.CTk):
                 coordinates.append(marker.position)
         coordinates.append(coordinates[0])
         self.path_list.append(self.map_widget.set_path(coordinates, width=4, color="blue"))
+
+    def add_home_event(self, coord):
+        if not self.home:
+            self.home = self.map_widget.set_marker(coord[0], coord[1], text="Home")
+        else:
+            self.home.set_position(coord[0], coord[1])
+
+    def remove_home_event(self):
+        if self.home:
+            self.home.delete()
+            self.home = None
 
     def clear_markers_and_paths(self):
         for marker in self.marker_list:
@@ -296,16 +309,55 @@ class App(customtkinter.CTk):
     # generating paths and exporting them to a file
 
     def generate_paths_for_rectangles(self):
-        turning_radius_ft = 150
+        # turning_radius_ft = 150
+
+        if len(self.rectangle_list) == 0:
+            messagebox.showerror("Error", "Please draw a rectangle")
+            return
+
+        if not self.home:
+            messagebox.showerror("Error", "Please set home location")
+            return
+
+        turning_radius_ft = self.generate_paths_dialogbox()
+
         for rectangle in self.rectangle_list:
             if not rectangle.deleted:
                 (startx, starty) = rectangle.position_list[0]
                 (endx, endy) = rectangle.position_list[2]
                 delta_lat, delta_lon = feet_to_latlon(turning_radius_ft, startx)
-                horizontal_path = generate_paths(endx, starty, startx, endy, delta_lon, direction='horizontal')
-                vertical_path = generate_paths(endx, starty, startx, endy, delta_lat, direction='vertical')
+
+                home_coords = self.home.position
+
+                horizontal_path = generate_paths(startx,
+                                                 starty,
+                                                 endx,
+                                                 endy,
+                                                 home_coords[0],
+                                                 home_coords[1],
+                                                 delta_lon,
+                                                 direction='horizontal')
+                vertical_path = generate_paths(startx,
+                                               starty,
+                                               endx,
+                                               endy,
+                                               home_coords[0],
+                                               home_coords[1],
+                                               delta_lat,
+                                               direction='vertical')
+                # self.map_widget.set_marker(horizontal_path[0][0], horizontal_path[0][1], text="start horiz")
+                # self.map_widget.set_marker(vertical_path[0][0], vertical_path[0][1], text="start vert")
+                #
+                # self.map_widget.set_marker(horizontal_path[-1][0], horizontal_path[-1][1], text="ending horiz")
+                # self.map_widget.set_marker(vertical_path[-1][0], vertical_path[-1][1], text="ending vert")
+
                 self.path_list.append(self.map_widget.set_path(horizontal_path, width=2.5, color="yellow"))
                 self.path_list.append(self.map_widget.set_path(vertical_path, width=2.5, color="red"))
+
+    def generate_paths_dialogbox(self):
+        answer = simpledialog.askinteger("Input", "What is your desired turning radius (ft)?",
+                                        parent=self.frame_right)
+        return answer
 
     def export_paths_to_file(self):
         print("exporting paths to file")
