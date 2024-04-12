@@ -39,7 +39,7 @@ def heartbeat(connection):
 
 def convert_positions_to_mission_items(positions):
     mission_items = []
-    curr_altitude = 60
+    curr_altitude = 40
 
     i = 0
 
