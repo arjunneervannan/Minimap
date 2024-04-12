@@ -34,6 +34,7 @@ def heartbeat(connection):
     while connection.target_system == 0:
         print("-- Checking heartbeat")
         connection.wait_heartbeat()
+        print("connected successfully")
         return True
 
 
@@ -43,7 +44,7 @@ def convert_positions_to_mission_items(profile):
     i = 0
 
     home_waypoint = missionItem(i, 0, profile[0][0], profile[0][1], 1)
-    home_waypoint.command = mavutil.mavlink.MAV_CMD_DO_SET_HOME
+    # home_waypoint.command = mavutil.mavlink.MAV_CMD_DO_SET_HOME
     mission_items.append(home_waypoint)
 
     i += 1
@@ -90,7 +91,9 @@ class drone:
         # self.the_connection.motors_armed_wait()
         # print('Armed!')
 
-        self.ack("COMMAND_ACK")
+        ack = self.ack("COMMAND_ACK")
+        if ack.result == 0:
+            return True
     
     def disarm(self):
         print("-- Arming")
@@ -99,7 +102,9 @@ class drone:
                                                   mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
                                                   0, 0, 0, 0, 0, 0, 0, 0)
 
-        self.ack("COMMAND_ACK")
+        ack = self.ack("COMMAND_ACK")
+        if ack.result == 0:
+            return True
     
     def set_rc_channel_pwm(self, channel_id, pwm=1500):
         """ Set RC channel pwm value
@@ -174,7 +179,9 @@ class drone:
             if waypoint != mission_items[n - 1]:
                 self.ack("MISSION_REQUEST")
 
-        self.ack("MISSION_ACK")
+        ack = self.ack("MISSION_ACK")
+        if ack.type == 0:
+            return True
     
     def set_return(self):
         print("--Set Return to Launch")
@@ -312,7 +319,7 @@ class drone:
     # Acknowledgement from the Drone
     def ack(self, keyword):
         message = self.the_connection.recv_match(type=keyword, blocking=True)
-        print("-- Message Read " + message)
+        print("-- Message Read " + str(message))
         return message
 
     def setup_gps_stream(self):

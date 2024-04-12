@@ -1,5 +1,6 @@
 import customtkinter
 import tkinter
+from networkx import is_connected
 from tkintermapview import TkinterMapView
 import sys
 import pickle as pkl
@@ -59,10 +60,15 @@ class App(customtkinter.CTk):
 
         # ============ frame_left ============
 
-        self.frame_left.grid_rowconfigure(2, weight=1)
+        self.frame_left.grid_rowconfigure(1, weight=1)
 
         self.app_name = customtkinter.CTkLabel(self.frame_left, text="MiniMap", anchor="w")
         self.app_name.grid(row=0, column=0, padx=(20, 20), pady=(20, 0))
+
+        self.disarm_drone_button = customtkinter.CTkButton(master=self.frame_left,
+                                                        text="Disarm Drone",
+                                                        command=self.disarm_drone)
+        self.disarm_drone_button.grid(pady=(20, 0), padx=(20, 20), row=2, column=0)
 
         self.arm_drone_button = customtkinter.CTkButton(master=self.frame_left,
                                                         text="Upload Mission",
@@ -180,10 +186,17 @@ class App(customtkinter.CTk):
     # connecting to drone
     def connect_to_drone(self):
         self.drone.connect()
+        if self.drone.is_connected:
+            tkinter.messagebox.Message(master=None, message="Drone connected succesfully", 
+                                       icon=tkinter.messagebox.INFO).show()
 
     def upload_mission(self):
         if len(self.rectangle_list) == 0:
             messagebox.showerror("Error", "Please draw a rectangle")
+            return
+        
+        if not self.drone.is_connected:
+            messagebox.showerror("Error", "Drone is not connected")
             return
 
         if not self.home:
@@ -198,23 +211,41 @@ class App(customtkinter.CTk):
 
         waypoints = self.path_list[answer].position_list
         profile = simple_landing_profile(waypoints, alt, 15)
-        for point in profile:
-            self.map_widget.set_marker(point[0], point[1], text=f"{point[2]} m")
-            print(point)
+        if profile is None:
+            messagebox.showerror("Error", "Profile too steep to land safely")
+            return
+        
 
         if self.drone.is_connected:
             mission_items = convert_positions_to_mission_items(profile)  # includes takeoff and landing
-            self.drone.upload_mission(mission_items)
+            if self.drone.upload_mission(mission_items):
+                tkinter.messagebox.Message(master=None, message="Mission uploaded succesfully", 
+                                           icon=tkinter.messagebox.INFO).show()
+                for point in profile:
+                    self.map_widget.set_marker(point[0], point[1], text=f"{point[2]} m")
+                    print(point)
         else:
             print("Drone is not connected")
 
     def arm_drone(self):
         if self.drone.is_connected:
             self.drone.auto()
-            self.drone.arm()
+            if self.drone.arm():
+                tkinter.messagebox.Message(master=None, message="Drone armed succesfully", 
+                                           icon=tkinter.messagebox.INFO).show()
         else:
-            print("Drone is not connected")
+            tkinter.messagebox.Message(master=None, message="Drone is not connected", 
+                                       icon=tkinter.messagebox.ERROR).show()
 
+    def disarm_drone(self):
+        if self.drone.is_connected:
+            if self.drone.disarm():
+                tkinter.messagebox.Message(master=None, message="Drone disarmed succesfully", 
+                                           icon=tkinter.messagebox.INFO).show()
+        else:
+            tkinter.messagebox.Message(master=None, message="Drone is not connected", 
+                                       icon=tkinter.messagebox.ERROR).show()
+    
     def update_gps(self):
         if self.drone:
             pitch = 0

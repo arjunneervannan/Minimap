@@ -44,9 +44,10 @@ def generate_paths(startx, starty, endx, endy, x_home, y_home, amplitude, direct
     points = generate_rectangle_paths(startx, starty, endx, endy, amplitude, direction)
 
     outside_point = generate_outside_point(startx, starty, endx, endy, points[-1][0], points[-1][1], amplitude)
-    points.append(outside_point)
-    home_sequence = go_home(outside_point[0], outside_point[1], x_home, y_home, startx, starty, endx, endy)
-    points.extend(home_sequence)
+    # points.append(outside_point)
+    # home_sequence = go_home(outside_point[0], outside_point[1], x_home, y_home, startx, starty, endx, endy)
+    # points.extend(home_sequence)
+    points.append((x_home, y_home))
     return points
 
 
@@ -201,8 +202,9 @@ def simple_landing_profile(waypoints, cruising_altitude, descent_angle):
     second_to_last = waypoints[-2]
     distance = haversine_distance(home_waypoint, second_to_last)
     radians_angle = math.radians(descent_angle)
-    final_descent_alt = 3
+    final_descent_alt = 4
     descent_distance = cruising_altitude / math.tan(radians_angle)
+    print("descent distance:", descent_distance)
 
     if descent_distance > distance:
         print("too steep")
@@ -219,6 +221,14 @@ def simple_landing_profile(waypoints, cruising_altitude, descent_angle):
                                                  waypoints[i + 1][1],
                                                  descent_distance)
             profile.append((descent_point[0], descent_point[1], final_descent_alt))
+            last_stretch_distance = haversine_distance(descent_point, home_waypoint)
+            if last_stretch_distance > 5:
+                new_descent_point = find_collinear_point(descent_point[0],
+                                                 descent_point[1],
+                                                 waypoints[i + 1][0],
+                                                 waypoints[i + 1][1],
+                                                 last_stretch_distance-5)
+                profile.append((new_descent_point[0], new_descent_point[1], 2))
             profile.append((waypoints[i+1][0], waypoints[i+1][1], 0))
             return profile
 
