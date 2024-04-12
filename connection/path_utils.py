@@ -1,6 +1,14 @@
 import math
 
 
+class path_data:
+    def __init__(self, index, length, time, area):
+        self.index = index
+        self.length = length
+        self.time = time
+        self.area = area
+
+
 def feet_to_latlon(feet, current_lat):
     # Constants
     feet_per_mile = 5280
@@ -83,3 +91,22 @@ def find_collinear_point(x1, y1, x2, y2, d):
     y3 = y1 + unit_dy * d
 
     return x3, y3
+
+
+def total_path_distance(waypoints):
+    total_distance = 0
+    for i in range(len(waypoints) - 1):
+        total_distance += haversine_distance(waypoints[i], waypoints[i + 1])
+    return total_distance
+
+
+def total_time(distance, speed):
+    # speed must be in meters per second
+    return distance / speed / 60 # returned value is in minutes
+
+
+def area_coverage(startx, starty, endx, endy):
+    # Calculate the area of a rectangle with the given coordinates
+    width = haversine_distance((startx, starty), (endx, starty))
+    height = haversine_distance((startx, starty), (startx, endy))
+    return width * height / 1000000  # Convert to square kilometers

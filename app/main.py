@@ -6,8 +6,6 @@ import pickle as pkl
 from tkinter import messagebox
 from tkinter import simpledialog
 
-from connection.path_utils import angle_of_descent
-
 sys.path.append('.')
 
 from connection.path_generation import *
@@ -27,6 +25,9 @@ class App(customtkinter.CTk):
 
         self.drone = drone()
         self.drone_data = drone_data()
+        self.path_index = 0
+
+        self.drone_speed = 20  # meters per second
 
         self.home = None
 
@@ -193,7 +194,7 @@ class App(customtkinter.CTk):
                                          parent=self.frame_right)
 
         alt = simpledialog.askinteger("Input", "Which altitude would you like to fly at? (m)",
-                                         parent=self.frame_right)
+                                      parent=self.frame_right)
 
         waypoints = self.path_list[answer].position_list
         profile = simple_landing_profile(waypoints, alt, 15)
@@ -257,7 +258,21 @@ class App(customtkinter.CTk):
             if not marker.deleted:
                 coordinates.append(marker.position)
         coordinates.append(coordinates[0])
-        self.path_list.append(self.map_widget.set_path(coordinates, width=4, color="blue"))
+
+        horiz_length = total_path_distance(coordinates)
+        horiz_time = total_time(horiz_length, self.drone_speed)
+
+        custom_path_data = path_data(index=self.path_index,
+                                     length=horiz_length,
+                                     time=horiz_time,
+                                     area=0)
+
+        self.path_list.append(self.map_widget.set_path(coordinates,
+                                                       width=4,
+                                                       color="blue",
+                                                       data=custom_path_data,
+                                                       command=self.on_path_click))
+        self.path_index += 1
 
     def add_home_event(self, coord):
         if not self.home:
@@ -283,7 +298,14 @@ class App(customtkinter.CTk):
             rectangle.delete()
 
     def on_path_click(self, event):
-        print(f"path clicked {event.x, event.y}")
+        # print(f"path clicked {event.data}")
+        new_window = tkinter.Toplevel()
+        new_window.title("Path Data")
+        new_window.geometry("200x200")
+        data_text = f"Index: {event.data.index}\nLength: {event.data.length:.2f} meters\n" \
+                    f"Time: {event.data.time:.2f} minutes\nArea: {event.data.area:.2f} km^2"
+        label = tkinter.Label(new_window, text=data_text, justify=tkinter.LEFT, padx=10, pady=10)
+        label.pack()
 
     # code below is for drawing rectangles / disabling map
     def switch_event(self):
@@ -334,8 +356,6 @@ class App(customtkinter.CTk):
     # generating paths and exporting them to a file
 
     def generate_paths_for_rectangles(self):
-        # turning_radius_ft = 150
-
         if len(self.rectangle_list) == 0:
             messagebox.showerror("Error", "Please draw a rectangle")
             return
@@ -379,14 +399,36 @@ class App(customtkinter.CTk):
                 horizontal_path.insert(0, horizontal_path[-1])
                 vertical_path.insert(0, vertical_path[-1])
 
+                horiz_length = total_path_distance(horizontal_path)
+                vert_length = total_path_distance(vertical_path)
+                horiz_time = total_time(horiz_length, self.drone_speed)
+                vert_time = total_time(vert_length, self.drone_speed)
+                area = area_coverage(startx, starty, endx, endy)
+
+                horiz_path_data = path_data(index=self.path_index,
+                                            length=horiz_length,
+                                            time=horiz_time,
+                                            area=area)
+
+                self.path_index += 1
+
+                vert_path_data = path_data(index=self.path_index,
+                                           length=vert_length,
+                                           time=vert_time,
+                                           area=area)
+
+                self.path_index += 1
+
                 self.path_list.append(self.map_widget.set_path(horizontal_path,
                                                                width=2.5,
                                                                color="yellow",
-                                                               command=self.on_path_click))
+                                                               command=self.on_path_click,
+                                                               data=horiz_path_data))
                 self.path_list.append(self.map_widget.set_path(vertical_path,
                                                                width=2.5,
                                                                color="red",
-                                                               command=self.on_path_click))
+                                                               command=self.on_path_click,
+                                                               data=vert_path_data))
 
     def generate_paths_dialogbox(self):
         answer = simpledialog.askinteger("Input", "What is your desired turning radius (m)?",
