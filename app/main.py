@@ -233,7 +233,7 @@ class App(customtkinter.CTk):
             if not marker.deleted:
                 coordinates.append(marker.position)
         coordinates.append(coordinates[0])
-        self.path_list.append(self.map_widget.set_path(coordinates, width=3))
+        self.path_list.append(self.map_widget.set_path(coordinates, width=4, color="blue"))
 
     def clear_markers_and_paths(self):
         for marker in self.marker_list:
@@ -253,7 +253,11 @@ class App(customtkinter.CTk):
             self.temporarily_unbind()
         else:
             self.rebind()
-            self.rectangle_list.append(self.map_widget.set_polygon(rectangle_coords, border_width=3, fill_color=None))
+            self.rectangle_list.append(self.map_widget.set_polygon(
+                rectangle_coords,
+                border_width=4,
+                outline_color="blue",
+                fill_color=None))
             self.map_widget.canvas.delete("rectangle")
 
     def on_first_click(self, event):
@@ -300,8 +304,8 @@ class App(customtkinter.CTk):
                 delta_lat, delta_lon = feet_to_latlon(turning_radius_ft, startx)
                 horizontal_path = generate_paths(endx, starty, startx, endy, delta_lon, direction='horizontal')
                 vertical_path = generate_paths(endx, starty, startx, endy, delta_lat, direction='vertical')
-                self.path_list.append(self.map_widget.set_path(horizontal_path, width=0.5, color="green"))
-                self.path_list.append(self.map_widget.set_path(vertical_path, width=0.5, color="red"))
+                self.path_list.append(self.map_widget.set_path(horizontal_path, width=2.5, color="yellow"))
+                self.path_list.append(self.map_widget.set_path(vertical_path, width=2.5, color="red"))
 
     def export_paths_to_file(self):
         print("exporting paths to file")
