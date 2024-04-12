@@ -44,6 +44,7 @@ def convert_positions_to_mission_items(positions):
     i = 0
 
     home_waypoint = missionItem(i, 0, positions[0][0], positions[0][1], 20)
+    home_waypoint.command = mavutil.mavlink.MAV_DO_SET_HOME
     mission_items.append(home_waypoint)
 
     i += 1

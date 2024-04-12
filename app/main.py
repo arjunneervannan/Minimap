@@ -16,7 +16,6 @@ customtkinter.set_default_color_theme("blue")
 
 
 class App(customtkinter.CTk):
-
     APP_NAME = "MiniMap Ground Control Station"
     WIDTH = 800
     HEIGHT = 500
@@ -58,7 +57,7 @@ class App(customtkinter.CTk):
         # ============ frame_left ============
 
         self.frame_left.grid_rowconfigure(2, weight=1)
-        
+
         self.app_name = customtkinter.CTkLabel(self.frame_left, text="MiniMap", anchor="w")
         self.app_name.grid(row=0, column=0, padx=(20, 20), pady=(20, 0))
 
@@ -68,13 +67,13 @@ class App(customtkinter.CTk):
         self.arm_drone_button.grid(pady=(20, 0), padx=(20, 20), row=3, column=0)
 
         self.arm_drone_button = customtkinter.CTkButton(master=self.frame_left,
-                                                text="Start Mission",
-                                                command=self.arm_drone)
+                                                        text="Start Mission",
+                                                        command=self.arm_drone)
         self.arm_drone_button.grid(pady=(20, 0), padx=(20, 20), row=4, column=0)
 
         self.drone_connect_button = customtkinter.CTkButton(master=self.frame_left,
-                                                text="Connect to Drone",
-                                                command=self.connect_to_drone)
+                                                            text="Connect to Drone",
+                                                            command=self.connect_to_drone)
         self.drone_connect_button.grid(pady=(20, 0), padx=(20, 20), row=5, column=0)
 
         self.switch = customtkinter.CTkSwitch(master=self.frame_left,
@@ -84,23 +83,25 @@ class App(customtkinter.CTk):
         self.switch.grid(row=6, column=0, padx=(20, 20), pady=(20, 0))
 
         self.generate_button = customtkinter.CTkButton(master=self.frame_left,
-                                                text="Generate All Paths",
-                                                command=self.generate_paths_for_rectangles)
+                                                       text="Generate All Paths",
+                                                       command=self.generate_paths_for_rectangles)
         self.generate_button.grid(pady=(20, 0), padx=(20, 20), row=7, column=0)
 
         self.export_button = customtkinter.CTkButton(master=self.frame_left,
-                                                text="Export All Paths",
-                                                command=self.export_paths_to_file)
+                                                     text="Export All Paths",
+                                                     command=self.export_paths_to_file)
         self.export_button.grid(pady=(20, 0), padx=(20, 20), row=8, column=0)
 
-        self.map_option_menu = customtkinter.CTkOptionMenu(self.frame_left, values=["OpenStreetMap", "Google normal", "Google Satellite"],
-                                                                       command=self.change_map)
+        self.map_option_menu = customtkinter.CTkOptionMenu(self.frame_left, values=["OpenStreetMap", "Google normal",
+                                                                                    "Google Satellite"],
+                                                           command=self.change_map)
         self.map_option_menu.grid(row=9, column=0, padx=(20, 20), pady=(10, 0))
 
         self.appearance_mode_label = customtkinter.CTkLabel(self.frame_left, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.grid(row=10, column=0, padx=(20, 20), pady=(20, 0))
 
-        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.frame_left, values=["Light", "Dark", "System"],
+        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.frame_left,
+                                                                       values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode)
         self.appearance_mode_optionemenu.grid(row=11, column=0, padx=(20, 20), pady=(10, 20))
 
@@ -125,16 +126,16 @@ class App(customtkinter.CTk):
                                                      command=self.add_waypoint_event,
                                                      pass_coords=True)
         self.map_widget.add_right_click_menu_command(label="Generate Flight Path",
-                                        command=self.add_path_event,
-                                        pass_coords=False)
+                                                     command=self.add_path_event,
+                                                     pass_coords=False)
         self.map_widget.add_right_click_menu_command(label="Clear Markers and Paths",
                                                      command=self.clear_markers_and_paths,
                                                      pass_coords=False)
         self.map_widget.add_right_click_menu_command(label="Delete All Rectangles",
                                                      command=self.clear_paths_and_rectangles,
                                                      pass_coords=False)
-        
-        self.map_widget.set_position(39.952, -75.192) # EQuad
+
+        self.map_widget.set_position(39.952, -75.192)  # EQuad
         self.map_widget.set_zoom(15)
         self.map_option_menu.set("Google Satellite")
         self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
@@ -161,9 +162,11 @@ class App(customtkinter.CTk):
         if new_map == "OpenStreetMap":
             self.map_widget.set_tile_server("https://a.tile.openstreetmap.org/{z}/{x}/{y}.png")
         elif new_map == "Google normal":
-            self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
+            self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga",
+                                            max_zoom=22)
         elif new_map == "Google satellite":
-            self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
+            self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}&s=Ga",
+                                            max_zoom=22)
 
     def on_closing(self, event=0):
         self.destroy()
@@ -173,17 +176,19 @@ class App(customtkinter.CTk):
 
     # connecting to drone
     def connect_to_drone(self):
-        print("button was pressed")
         self.drone.connect()
-    
+
     def upload_mission(self):
-        if self.drone.is_connected:
-            path = self.path_list[0].position_list
-            mission_items = convert_positions_to_mission_items(path) # includes takeoff and landing
-            self.drone.upload_mission(mission_items)
-        else:
-            print("Drone is not connected")
-    
+        waypoints = self.path_list[0].position_list
+        cumulative_distances, altitudes = calculate_flight_path(waypoints, 40, 25)
+        plot_flight_path(cumulative_distances, altitudes)
+        # if self.drone.is_connected:
+        #     path = self.path_list[0].position_list
+        #     mission_items = convert_positions_to_mission_items(path)  # includes takeoff and landing
+        #     self.drone.upload_mission(mission_items)
+        # else:
+        #     print("Drone is not connected")
+
     def arm_drone(self):
         if self.drone.is_connected:
             self.drone.auto()
@@ -191,7 +196,6 @@ class App(customtkinter.CTk):
         else:
             print("Drone is not connected")
 
-    
     def update_gps(self):
         if self.drone:
             pitch = 0
@@ -219,16 +223,16 @@ class App(customtkinter.CTk):
             # self.drone_data.print_current_state()
             # self.display_drone()
             self.after(10, self.update_gps)
-    
+
     def display_drone(self):
         self.map_widget.set_marker(self.drone_data.lat, self.drone_data.lon,
-                                    text=f"drone {self.drone_data.pitch}")
+                                   text=f"drone {self.drone_data.pitch}")
 
     # set markers and custom paths
     def add_waypoint_event(self, coord):
         self.marker_list.append(self.map_widget.set_marker(coord[0], coord[1],
-                                                           text=f"waypoint {len(self.marker_list)+1}"))
-        
+                                                           text=f"waypoint {len(self.marker_list) + 1}"))
+
     def add_path_event(self):
         coordinates = []
         for marker in self.marker_list:
@@ -259,6 +263,9 @@ class App(customtkinter.CTk):
             path.delete()
         for rectangle in self.rectangle_list:
             rectangle.delete()
+
+    def on_path_click(self):
+        print("path clicked")
 
     # code below is for drawing rectangles / disabling map
     def switch_event(self):
@@ -304,7 +311,7 @@ class App(customtkinter.CTk):
     def convert_rectangle_coords(self, start_x, start_y, end_x, end_y):
         (x1, y1) = self.map_widget.convert_canvas_coords_to_decimal_coords(start_x, start_y)
         (x2, y2) = self.map_widget.convert_canvas_coords_to_decimal_coords(end_x, end_y)
-        return [(x1, y1),  (x2, y1), (x2, y2), (x1, y2)]
+        return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
     # generating paths and exporting them to a file
 
@@ -351,12 +358,18 @@ class App(customtkinter.CTk):
                 # self.map_widget.set_marker(horizontal_path[-1][0], horizontal_path[-1][1], text="ending horiz")
                 # self.map_widget.set_marker(vertical_path[-1][0], vertical_path[-1][1], text="ending vert")
 
-                self.path_list.append(self.map_widget.set_path(horizontal_path, width=2.5, color="yellow"))
-                self.path_list.append(self.map_widget.set_path(vertical_path, width=2.5, color="red"))
+                self.path_list.append(self.map_widget.set_path(horizontal_path,
+                                                               width=2.5,
+                                                               color="yellow",
+                                                               command=self.on_path_click))
+                self.path_list.append(self.map_widget.set_path(vertical_path,
+                                                               width=2.5,
+                                                               color="red",
+                                                               command=self.on_path_click))
 
     def generate_paths_dialogbox(self):
         answer = simpledialog.askinteger("Input", "What is your desired turning radius (ft)?",
-                                        parent=self.frame_right)
+                                         parent=self.frame_right)
         return answer
 
     def export_paths_to_file(self):

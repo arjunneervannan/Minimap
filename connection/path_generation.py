@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import math
 import numpy as np
@@ -159,9 +161,13 @@ def go_home(x1, y1, x2, y2, startx, starty, endx, endy):
     # Define the rectangle
     rectangle = (startx, starty, endx, endy)
 
+    r_minx, r_miny = min(startx, endx), min(starty, endy)
+    r_maxx, r_maxy = max(startx, endx), max(starty, endy)
+    if r_minx <= x2 <= r_maxx and r_miny <= y2 <= r_maxy:
+        return [(x1, y1), (x2, y2)]
+
     # Check if line intersects with rectangle
     if line_intersects_rect((x1, y1), (x2, y2), rectangle):
-        print("intersected")
 
         # Determine reroute path around the rectangle
         waypoints = []
@@ -172,11 +178,123 @@ def go_home(x1, y1, x2, y2, startx, starty, endx, endy):
         elif y2 < min(starty, endy):
             # Pass below the rectangle
             waypoints = [(x1, y1), (x1, min(starty, endy)), (x2, y2)]
+        else:
+            # Pass through the sides of the rectangle
+            if x2 < min(startx, endx):
+                # Pass through the left side of the rectangle
+                waypoints = [(x1, y1), (min(startx, endx), y1), (x2, y2)]
+            elif x2 > max(startx, endx):
+                # Pass through the right side of the rectangle
+                waypoints = [(x1, y1), (max(startx, endx), y1), (x2, y2)]
         return waypoints
     else:
         # No intersection, direct line is fine
-        print("not intersected")
         return [(x1, y1), (x2, y2)]
+
+
+def calculate_flight_path(waypoints, cruising_altitude, descent_angle):
+    # Constants
+    final_descent_distance = 25  # meters
+    final_descent_start_altitude = 3  # meters
+    radians_angle = math.radians(descent_angle)  # Convert angle to radians
+
+    # Haversine function to calculate distance between lat/long points
+    def haversine_distance(coord1, coord2):
+        lat1, lon1 = coord1
+        lat2, lon2 = coord2
+        R = 6371000  # Earth radius in meters
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+        a = math.sin(delta_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c
+
+    altitudes = []
+    cumulative_distances = []  # Start from 0 distance
+    distance_covered = 0
+    total_distance = sum(haversine_distance(waypoints[i], waypoints[i + 1]) for i in range(len(waypoints) - 1))
+    initial_descent_distance = final_descent_start_altitude / math.tan(radians_angle)
+    total_descent_distance = initial_descent_distance + final_descent_distance
+    cruising_distance = total_distance - total_descent_distance
+
+    for i in range(len(waypoints) - 1):
+        current_distance = haversine_distance(waypoints[i], waypoints[i + 1])
+        distance_covered += current_distance
+        cumulative_distances.append(distance_covered)
+
+        if distance_covered <= cruising_distance:
+            altitudes.append(cruising_altitude)
+        else:
+            remaining_distance = distance_covered - cruising_distance
+            # here we need to add a point that is colinear between the two points but at the right distance
+            descent_altitude = max(cruising_altitude - remaining_distance * math.tan(radians_angle), 0)
+            altitudes.append(descent_altitude)
+
+    return cumulative_distances, altitudes
+
+
+def find_collinear_point(x1, y1, x2, y2, d):
+    # Compute the vector components from (x1, y1) to (x2, y2)
+    dx = x2 - x1
+    dy = y2 - y1
+
+    # Calculate the length of the vector
+    length = math.sqrt(dx ** 2 + dy ** 2)
+
+    # Normalize the vector to make it a unit vector
+    unit_dx = dx / length
+    unit_dy = dy / length
+
+    # Compute the new point by extending the unit vector by distance d
+    x3 = x1 + unit_dx * d
+    y3 = y1 + unit_dy * d
+
+    return x3, y3
+
+
+def plot_flight_path(cumulative_distances, altitudes):
+    # Calculate the total distance of the flight path
+    total_distance = cumulative_distances[-1]
+
+    # Find the index where the last 1000 meters start
+    start_index = next(i for i, dist in enumerate(cumulative_distances) if dist >= total_distance - 1000)
+
+    # Extract the data for the last 1000 meters
+    final_segment_distances = cumulative_distances[start_index:]
+    final_segment_altitudes = altitudes[start_index:]
+
+    # Adjust distances to start from 0 at the beginning of the last 1000 meters
+    adjusted_distances = [dist - final_segment_distances[0] for dist in final_segment_distances]
+
+    # Plotting the altitude profile for the last 1000 meters
+    plt.figure(figsize=(10, 5))
+    plt.plot(adjusted_distances, final_segment_altitudes, marker='o', linestyle='-', color='b')
+    plt.title('Final 1000 Meters Altitude Profile')
+    plt.xlabel('Distance (m) from -1000 meters to End')
+    plt.ylabel('Altitude (m)')
+    plt.grid(True)
+    plt.show()
+
+
+def feet_to_latlon(feet, current_lat):
+    # Constants
+    feet_per_mile = 5280
+    miles_per_degree_lat = 69
+
+    # Convert feet to miles
+    miles = feet / feet_per_mile
+
+    # Calculate change in latitude
+    delta_lat = miles / miles_per_degree_lat
+
+    # Calculate change in longitude, adjusting for current latitude
+    # Cosine requires radians, so convert current latitude from degrees to radians
+    current_lat_rad = math.radians(current_lat)
+    miles_per_degree_lon = miles_per_degree_lat * math.cos(current_lat_rad)
+    delta_lon = miles / miles_per_degree_lon
+
+    return delta_lat, delta_lon
 
 
 def visualize_test_paths(points, startx, starty, endx, endy, title='Zigzag Path'):
@@ -204,26 +322,6 @@ def visualize_test_paths(points, startx, starty, endx, endy, title='Zigzag Path'
 
     # Show the plot
     plt.show()
-
-
-def feet_to_latlon(feet, current_lat):
-    # Constants
-    feet_per_mile = 5280
-    miles_per_degree_lat = 69
-
-    # Convert feet to miles
-    miles = feet / feet_per_mile
-
-    # Calculate change in latitude
-    delta_lat = miles / miles_per_degree_lat
-
-    # Calculate change in longitude, adjusting for current latitude
-    # Cosine requires radians, so convert current latitude from degrees to radians
-    current_lat_rad = math.radians(current_lat)
-    miles_per_degree_lon = miles_per_degree_lat * math.cos(current_lat_rad)
-    delta_lon = miles / miles_per_degree_lon
-
-    return delta_lat, delta_lon
 
 
 def test_paths():
