@@ -1,4 +1,5 @@
 from __future__ import print_function
+import time
 from click import File
 from numpy import block
 import os
@@ -75,7 +76,8 @@ class drone:
         self.port = port
         self.baudrate = baudrate
         self.id = drone_id
-
+        self.is_connected=False
+    
     def connect(self):
         self.the_connection = mavutil.mavlink_connection(self.port, baud=self.baudrate)
         self.is_connected = heartbeat(self.the_connection)
@@ -312,7 +314,9 @@ class drone:
     
     # Acknowledgement from the Drone
     def ack(self, keyword):
-        print("-- Message Read " + str(self.the_connection.recv_match(type=keyword, blocking=True)))
+        message = self.the_connection.recv_match(type=keyword, blocking=True)
+        print("-- Message Read " + message)
+        return message
 
     def setup_gps_stream(self):
         gps_message = self.the_connection.mav.command_long_encode(

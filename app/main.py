@@ -1,14 +1,18 @@
 import customtkinter
 import tkinter
+from tkinter import *
+from networkx import is_connected
 from tkintermapview import TkinterMapView
 import sys
 import pickle as pkl
+import cv2
 sys.path.append('.')
 
 from backend.path_generation import *
 from backend.waypoint_export import *
 from connection.connection_utils import *
 from connection.drone_data import *
+from video_capture import *
 
 customtkinter.set_default_color_theme("blue")
 
@@ -22,7 +26,7 @@ class App(customtkinter.CTk):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.drone = None
+        self.drone = drone()
         self.drone_data = drone_data()
 
         self.title(App.APP_NAME)
@@ -53,30 +57,30 @@ class App(customtkinter.CTk):
 
         # ============ frame_left ============
 
-        self.frame_left.grid_rowconfigure(3, weight=1)
+        self.frame_left.grid_rowconfigure(2, weight=1)
         
         self.app_name = customtkinter.CTkLabel(self.frame_left, text="MiniMap", anchor="w")
         self.app_name.grid(row=0, column=0, padx=(20, 20), pady=(20, 0))
         
-        self.home_button = customtkinter.CTkButton(self.frame_left, corner_radius=0, height=40, border_spacing=10, text="Home",
-                                                   fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
-                                                   anchor="w", command=self.set_marker_event)
-        self.home_button.grid(row=1, column=0, sticky="ew")
+        # self.home_button = customtkinter.CTkButton(self.frame_left, corner_radius=0, height=40, border_spacing=10, text="Home",
+        #                                            fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
+        #                                            anchor="w", command=self.connect_to_drone)
+        # self.home_button.grid(row=1, column=0, sticky="ew")
 
-        self.drone_config_button = customtkinter.CTkButton(self.frame_left, corner_radius=0, height=40, border_spacing=10, text="Drone Config",
-                                                           fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
-                                                           anchor="w", command=self.clear_markers_and_paths)
-        self.drone_config_button.grid(row=2, column=0, sticky="ew")
+        # self.drone_config_button = customtkinter.CTkButton(self.frame_left, corner_radius=0, height=40, border_spacing=10, text="Drone Config",
+        #                                                    fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
+        #                                                    anchor="w", command=self.clear_markers_and_paths)
+        # self.drone_config_button.grid(row=2, column=0, sticky="ew")
 
-        # self.arm_drone_button = customtkinter.CTkButton(master=self.frame_left,
-        #                                         text="Arm Drone",
-        #                                         command=self.arm_drone())
-        # self.arm_drone_button.grid(pady=(20, 0), padx=(20, 20), row=4, column=0)
+        self.arm_drone_button = customtkinter.CTkButton(master=self.frame_left,
+                                                text="Start Mission",
+                                                command=self.arm_drone)
+        self.arm_drone_button.grid(pady=(20, 0), padx=(20, 20), row=4, column=0)
 
-        # self.drone_connect_button = customtkinter.CTkButton(master=self.frame_left,
-        #                                         text="Connect to Drone",
-        #                                         command=self.connect_to_drone())
-        # self.drone_connect_button.grid(pady=(20, 0), padx=(20, 20), row=5, column=0)
+        self.drone_connect_button = customtkinter.CTkButton(master=self.frame_left,
+                                                text="Connect to Drone",
+                                                command=self.connect_to_drone)
+        self.drone_connect_button.grid(pady=(20, 0), padx=(20, 20), row=5, column=0)
 
         self.switch = customtkinter.CTkSwitch(master=self.frame_left,
                                               text=f"Draw Rectangle Mode",
@@ -115,19 +119,6 @@ class App(customtkinter.CTk):
 
         self.map_widget = TkinterMapView(self.frame_right, corner_radius=0)
         self.map_widget.grid(row=0, rowspan=1, column=0, columnspan=3, sticky="nswe", padx=(0, 0), pady=(0, 0))
-
-        # self.entry = customtkinter.CTkEntry(master=self.frame_right,
-        #                                     placeholder_text="type address")
-        # self.entry.grid(row=0, column=0, sticky="we", padx=(12, 0), pady=12)
-        # self.entry.bind("<Return>", self.search_event)
-
-        # self.button_5 = customtkinter.CTkButton(master=self.frame_right,
-        #                                         text="Search",
-        #                                         width=90,
-        #                                         command=self.search_event)
-        # self.button_5.grid(row=0, column=1, sticky="w", padx=(12, 0), pady=12)
-
-        # Set default values
         
         self.map_widget.add_right_click_menu_command(label="Add Custom Waypoint",
                                         command=self.add_marker_event,
@@ -155,8 +146,8 @@ class App(customtkinter.CTk):
         self.drone_marker = self.map_widget.set_marker(39.952, -75.192, text=f"drone {1}")
         # self.update_gps()
 
-    def search_event(self, event=None):
-        self.map_widget.set_address(self.entry.get())
+    # def search_event(self, event=None):
+    #     self.map_widget.set_address(self.entry.get())
 
     def set_marker_event(self):
         current_position = self.map_widget.get_position()
@@ -182,14 +173,23 @@ class App(customtkinter.CTk):
     # connecting to drone
     def connect_to_drone(self):
         print("button was pressed")
-        if not self.drone:
-            self.drone = drone()
-            if self.drone.is_connected:
-                print("connecting to drone")
-                self.drone.setup_gps_stream()
+        self.drone.connect()
+    
+    def upload_mission(self):
+        if self.drone.is_connected:
+            path = self.path_list[0].position_list
+            mission_items = convert_positions_to_mission_items(path) # includes takeoff and landing
+            self.drone.upload_mission(mission_items)
+        else:
+            print("Drone is not connected")
     
     def arm_drone(self):
-        print("arming drone")
+        if self.drone.is_connected:
+            self.drone.auto()
+            self.drone.arm()
+        else:
+            print("Drone is not connected")
+
     
     def update_gps(self):
         if self.drone:
