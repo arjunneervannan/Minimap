@@ -6,6 +6,8 @@ import pickle as pkl
 from tkinter import messagebox
 from tkinter import simpledialog
 
+from connection.path_utils import angle_of_descent
+
 sys.path.append('.')
 
 from connection.path_generation import *
@@ -179,15 +181,31 @@ class App(customtkinter.CTk):
         self.drone.connect()
 
     def upload_mission(self):
-        waypoints = self.path_list[0].position_list
-        cumulative_distances, altitudes = calculate_flight_path(waypoints, 40, 25)
-        plot_flight_path(cumulative_distances, altitudes)
-        # if self.drone.is_connected:
-        #     path = self.path_list[0].position_list
-        #     mission_items = convert_positions_to_mission_items(path)  # includes takeoff and landing
-        #     self.drone.upload_mission(mission_items)
-        # else:
-        #     print("Drone is not connected")
+        if len(self.rectangle_list) == 0:
+            messagebox.showerror("Error", "Please draw a rectangle")
+            return
+
+        if not self.home:
+            messagebox.showerror("Error", "Please set home location")
+            return
+
+        answer = simpledialog.askinteger("Input", "Which path do you want to upload?",
+                                         parent=self.frame_right)
+
+        alt = simpledialog.askinteger("Input", "Which altitude would you like to fly at? (m)",
+                                         parent=self.frame_right)
+
+        waypoints = self.path_list[answer].position_list
+        profile = simple_landing_profile(waypoints, alt, 15)
+        for point in profile:
+            self.map_widget.set_marker(point[0], point[1], text=f"{point[2]} m")
+            print(point)
+
+        if self.drone.is_connected:
+            mission_items = convert_positions_to_mission_items(profile)  # includes takeoff and landing
+            self.drone.upload_mission(mission_items)
+        else:
+            print("Drone is not connected")
 
     def arm_drone(self):
         if self.drone.is_connected:
@@ -264,8 +282,8 @@ class App(customtkinter.CTk):
         for rectangle in self.rectangle_list:
             rectangle.delete()
 
-    def on_path_click(self):
-        print("path clicked")
+    def on_path_click(self, event):
+        print(f"path clicked {event.x, event.y}")
 
     # code below is for drawing rectangles / disabling map
     def switch_event(self):
@@ -332,7 +350,7 @@ class App(customtkinter.CTk):
             if not rectangle.deleted:
                 (startx, starty) = rectangle.position_list[0]
                 (endx, endy) = rectangle.position_list[2]
-                delta_lat, delta_lon = feet_to_latlon(turning_radius_ft, startx)
+                delta_lat, delta_lon = meters_to_lat_lon_change(turning_radius_ft, startx)
 
                 home_coords = self.home.position
 
@@ -358,6 +376,9 @@ class App(customtkinter.CTk):
                 # self.map_widget.set_marker(horizontal_path[-1][0], horizontal_path[-1][1], text="ending horiz")
                 # self.map_widget.set_marker(vertical_path[-1][0], vertical_path[-1][1], text="ending vert")
 
+                horizontal_path.insert(0, horizontal_path[-1])
+                vertical_path.insert(0, vertical_path[-1])
+
                 self.path_list.append(self.map_widget.set_path(horizontal_path,
                                                                width=2.5,
                                                                color="yellow",
@@ -368,7 +389,7 @@ class App(customtkinter.CTk):
                                                                command=self.on_path_click))
 
     def generate_paths_dialogbox(self):
-        answer = simpledialog.askinteger("Input", "What is your desired turning radius (ft)?",
+        answer = simpledialog.askinteger("Input", "What is your desired turning radius (m)?",
                                          parent=self.frame_right)
         return answer
 

@@ -1,8 +1,10 @@
 import matplotlib
+
+from connection.path_utils import *
+
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import math
-import numpy as np
 
 
 def old_generate_paths(startx, starty, endx, endy, amplitude, direction='horizontal'):
@@ -145,7 +147,7 @@ def go_home(x1, y1, x2, y2, startx, starty, endx, endy):
             ((r_minx, r_miny), (r_maxx, r_miny)),  # Bottom side
             ((r_maxx, r_miny), (r_maxx, r_maxy)),  # Right side
             ((r_maxx, r_maxy), (r_minx, r_maxy)),  # Top side
-            ((r_minx, r_maxy), (r_minx, r_miny))   # Left side
+            ((r_minx, r_maxy), (r_minx, r_miny))  # Left side
         ]
         for rect_side in rect_sides:
             if segments_intersect(p1, p2, rect_side[0], rect_side[1]):
@@ -154,8 +156,10 @@ def go_home(x1, y1, x2, y2, startx, starty, endx, endy):
 
     def segments_intersect(p1, p2, p3, p4):
         """Return True if line segments p1-p2 and p3-p4 intersect."""
+
         def ccw(A, B, C):
             return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0])
+
         return ccw(p1, p3, p4) != ccw(p2, p3, p4) and ccw(p1, p2, p3) != ccw(p1, p2, p4)
 
     # Define the rectangle
@@ -192,65 +196,214 @@ def go_home(x1, y1, x2, y2, startx, starty, endx, endy):
         return [(x1, y1), (x2, y2)]
 
 
+def simple_landing_profile(waypoints, cruising_altitude, descent_angle):
+    home_waypoint = waypoints[-1]
+    second_to_last = waypoints[-2]
+    distance = haversine_distance(home_waypoint, second_to_last)
+    radians_angle = math.radians(descent_angle)
+    final_descent_alt = 3
+    descent_distance = cruising_altitude / math.tan(radians_angle)
+
+    if descent_distance > distance:
+        print("too steep")
+        return
+
+    profile = []
+
+    for i in range(len(waypoints)):
+        profile.append((waypoints[i][0], waypoints[i][1], cruising_altitude))
+        if i == len(waypoints) - 2:
+            descent_point = find_collinear_point(waypoints[i][0],
+                                                 waypoints[i][1],
+                                                 waypoints[i + 1][0],
+                                                 waypoints[i + 1][1],
+                                                 descent_distance)
+            profile.append((descent_point[0], descent_point[1], final_descent_alt))
+            profile.append((waypoints[i+1][0], waypoints[i+1][1], 0))
+            return profile
+
+
 def calculate_flight_path(waypoints, cruising_altitude, descent_angle):
     # Constants
     final_descent_distance = 25  # meters
-    final_descent_start_altitude = 3  # meters
+    final_approach_altitude = 3  # meters
+    final_descent_angle = math.tan(final_approach_altitude / final_descent_distance)  # degrees
     radians_angle = math.radians(descent_angle)  # Convert angle to radians
-
-    # Haversine function to calculate distance between lat/long points
-    def haversine_distance(coord1, coord2):
-        lat1, lon1 = coord1
-        lat2, lon2 = coord2
-        R = 6371000  # Earth radius in meters
-        phi1, phi2 = math.radians(lat1), math.radians(lat2)
-        delta_phi = math.radians(lat2 - lat1)
-        delta_lambda = math.radians(lon2 - lon1)
-        a = math.sin(delta_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        return R * c
 
     altitudes = []
     cumulative_distances = []  # Start from 0 distance
     distance_covered = 0
     total_distance = sum(haversine_distance(waypoints[i], waypoints[i + 1]) for i in range(len(waypoints) - 1))
-    initial_descent_distance = final_descent_start_altitude / math.tan(radians_angle)
+    initial_descent_distance = cruising_altitude / math.tan(radians_angle)
     total_descent_distance = initial_descent_distance + final_descent_distance
     cruising_distance = total_distance - total_descent_distance
 
-    for i in range(len(waypoints) - 1):
+    begin_descent = False
+    final_approach = False
+
+    i = 0
+    while distance_covered < total_distance:
         current_distance = haversine_distance(waypoints[i], waypoints[i + 1])
         distance_covered += current_distance
-        cumulative_distances.append(distance_covered)
 
-        if distance_covered <= cruising_distance:
-            altitudes.append(cruising_altitude)
+        # case 1: we are cruising
+        if distance_covered < cruising_distance:
+            altitudes.append((waypoints[i][0], waypoints[i][1], cruising_altitude))
+
         else:
+            # case 2: we are descending (initial or final descent)
             remaining_distance = distance_covered - cruising_distance
-            # here we need to add a point that is colinear between the two points but at the right distance
-            descent_altitude = max(cruising_altitude - remaining_distance * math.tan(radians_angle), 0)
-            altitudes.append(descent_altitude)
+            if not begin_descent:
+                # Start descent
+                begin_descent = True
+                # this is the last cruise point
+                last_cruise_point = find_collinear_point(waypoints[i][0],
+                                                         waypoints[i][1],
+                                                         waypoints[i + 1][0],
+                                                         waypoints[i + 1][1],
+                                                         cruising_distance - (distance_covered - current_distance))
+                altitudes.append((last_cruise_point[0], last_cruise_point[1], cruising_altitude))
+                waypoints.insert(i, (last_cruise_point[0], last_cruise_point[1]))
+                # we overshot the distance covered so we need to reset it
+                distance_covered = cruising_distance
+            else:
+                # case 2.1: we haven't reached final descent yet
+                # the first time this case is reached, it should reflect the distance from the last point of cruise
+                if remaining_distance < initial_descent_distance:
+                    # we are in initial descent
+                    altitudes.append((waypoints[i][0], waypoints[i][1],
+                                      cruising_altitude - remaining_distance * math.tan(radians_angle)))
+                else:
+                    # case 2.2: we are in final descent
+                    descent_distance = distance_covered - (cruising_distance + initial_descent_distance)
+                    if not final_approach:
+                        # Start final approach
+                        final_approach = True
+                        # this is the last descent point
+                        last_descent_point = find_collinear_point(waypoints[i][0],
+                                                                  waypoints[i][1],
+                                                                  waypoints[i + 1][0],
+                                                                  waypoints[i + 1][1],
+                                                                  (cruising_distance + initial_descent_distance) - (
+                                                                          distance_covered - current_distance))
+                        altitudes.append((last_descent_point[0], last_descent_point[1], final_approach_altitude))
+                        waypoints.insert(i, (last_descent_point[0], last_descent_point[1]))
+                        # we overshot the distance covered so we need to reset it
+                        distance_covered = cruising_distance + initial_descent_distance
+                    else:
+                        # we are in final approach
+                        altitudes.append((waypoints[i][0], waypoints[i][1],
+                                          final_approach_altitude - remaining_distance * math.tan(final_descent_angle)))
+        i += 1
+    # for i in range(len(waypoints) - 1):
+    #     current_distance = haversine_distance(waypoints[i], waypoints[i + 1])
+    #     distance_covered += current_distance
+    #     cumulative_distances.append(distance_covered)
+    #
+    #     if distance_covered < cruising_distance:
+    #         altitudes.append((waypoints[i][0], waypoints[i][1], cruising_altitude))
+    #     else:
+    #         remaining_distance = distance_covered - cruising_distance
+    #         # here we need to add a point that is collinear between the two points but at the right distance
+    #         # only if the descent hasn't begun; otherwise we should continue to
+    #         if not begin_descent:
+    #             # Start descent
+    #             begin_descent = True
+    #             # this is the last cruise point
+    #             last_cruise_point = find_collinear_point(waypoints[i][0],
+    #                                                      waypoints[i][1],
+    #                                                      waypoints[i + 1][0],
+    #                                                      waypoints[i + 1][1],
+    #                                                      remaining_distance)
+    #             altitudes.append((last_cruise_point[0], last_cruise_point[1], cruising_altitude))
+    #             descent_altitude = cruising_altitude - remaining_distance * math.tan(radians_angle)
+    #             altitudes.append((waypoints[i][0], waypoints[i][1], descent_altitude))
+    #         else:
+    #             if final_approach:
+    #                 pass
+    #             else:
+    #                 if distance_covered >= cruising_distance + initial_descent_distance:
+    #                     # here we start final approach because the last point (home) is after the final approach
+    #                     final_approach = True
+    #                     # we need to start the final approach because we have some point that that is after the final
+    #                     # approach
+    #                     first_final_approach_point = find_collinear_point(altitudes[-1][0],
+    #                                                                       altitudes[-1][1],
+    #                                                                       waypoints[i + 1][0],
+    #                                                                       waypoints[i + 1][1],
+    #                                                                       initial_descent_distance)
+    #                     altitudes.append((first_final_approach_point[0],
+    #                                       first_final_approach_point[1],
+    #                                       final_approach_altitude))
+    #                 else:
+    #                     descent_altitude = max(cruising_altitude - remaining_distance * math.tan(radians_angle), 0)
+    #                     altitudes.append((waypoints[i][0], waypoints[i][1], descent_altitude))
 
-    return cumulative_distances, altitudes
+    return altitudes
 
 
-def find_collinear_point(x1, y1, x2, y2, d):
-    # Compute the vector components from (x1, y1) to (x2, y2)
-    dx = x2 - x1
-    dy = y2 - y1
-
-    # Calculate the length of the vector
-    length = math.sqrt(dx ** 2 + dy ** 2)
-
-    # Normalize the vector to make it a unit vector
-    unit_dx = dx / length
-    unit_dy = dy / length
-
-    # Compute the new point by extending the unit vector by distance d
-    x3 = x1 + unit_dx * d
-    y3 = y1 + unit_dy * d
-
-    return x3, y3
+# def calculate_flight_path_2(waypoints, cruising_altitude, descent_angle):
+#     # Constants
+#     final_descent_distance = 25  # meters
+#     final_descent_start_altitude = 5  # meters
+#     radians_angle = math.radians(descent_angle)  # Convert angle to radians
+#
+#     # Function to calculate distance between two lat/long points
+#     def haversine_distance(coord1, coord2):
+#         lat1, lon1 = coord1
+#         lat2, lon2 = coord2
+#         R = 6371000  # Earth radius in meters
+#         phi1, phi2 = math.radians(lat1), math.radians(lat2)
+#         delta_phi = math.radians(lat2 - lat1)
+#         delta_lambda = math.radians(lon2 - lon1)
+#         a = math.sin(delta_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+#         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+#         return R * c
+#
+#     # Calculate total path distance
+#     total_distance = sum(haversine_distance(waypoints[i], waypoints[i + 1]) for i in range(len(waypoints) - 1))
+#
+#     # Calculate distance for initial descent to final 5m over 25m horizontal
+#     initial_descent_distance = final_descent_start_altitude / math.tan(radians_angle)
+#     total_descent_distance = initial_descent_distance + final_descent_distance
+#     ascent_distance = total_distance - total_descent_distance
+#
+#     # If not enough distance to descent, we need to add waypoints
+#     if ascent_distance < 0:
+#         print("Not enough distance to perform the descent as specified. Adjusting the route...")
+#         ascent_distance = 0
+#         # Adjust the descent start point and recalculate distances (example: could be more complex)
+#         total_descent_distance = total_distance
+#         initial_descent_distance = total_descent_distance - final_descent_distance
+#
+#     # Generate altitude profile
+#     altitudes = []
+#     distance_covered = 0
+#     for i in range(len(waypoints) - 1):
+#         current_distance = haversine_distance(waypoints[i], waypoints[i + 1])
+#         if distance_covered + current_distance < ascent_distance:
+#             # Cruise altitude
+#             altitudes.append((waypoints[i][0], waypoints[i][1], cruising_altitude))
+#         else:
+#             # Calculate descent
+#             if distance_covered < ascent_distance:
+#                 # Start descent
+#                 descent_start = cruising_altitude - (distance_covered + current_distance - ascent_distance) * math.tan(
+#                     radians_angle)
+#                 altitudes.append((waypoints[i][0], waypoints[i][1], descent_start))
+#             else:
+#                 # Full descent
+#                 previous_altitude = altitudes[-1][2]
+#                 new_altitude = previous_altitude - current_distance * math.tan(radians_angle)
+#                 altitudes.append(
+#                     (waypoints[i][0], waypoints[i][1], max(new_altitude, 0)))  # Ensure altitude doesn't go below zero
+#
+#         distance_covered += current_distance
+#
+#     # Final waypoint at ground level
+#     altitudes.append((waypoints[-1][0], waypoints[-1][1], 0))
+#
+#     return altitudes
 
 
 def plot_flight_path(cumulative_distances, altitudes):
@@ -275,26 +428,6 @@ def plot_flight_path(cumulative_distances, altitudes):
     plt.ylabel('Altitude (m)')
     plt.grid(True)
     plt.show()
-
-
-def feet_to_latlon(feet, current_lat):
-    # Constants
-    feet_per_mile = 5280
-    miles_per_degree_lat = 69
-
-    # Convert feet to miles
-    miles = feet / feet_per_mile
-
-    # Calculate change in latitude
-    delta_lat = miles / miles_per_degree_lat
-
-    # Calculate change in longitude, adjusting for current latitude
-    # Cosine requires radians, so convert current latitude from degrees to radians
-    current_lat_rad = math.radians(current_lat)
-    miles_per_degree_lon = miles_per_degree_lat * math.cos(current_lat_rad)
-    delta_lon = miles / miles_per_degree_lon
-
-    return delta_lat, delta_lon
 
 
 def visualize_test_paths(points, startx, starty, endx, endy, title='Zigzag Path'):
@@ -327,9 +460,9 @@ def visualize_test_paths(points, startx, starty, endx, endy, title='Zigzag Path'
 def test_paths():
     # Example usage with start and end coordinates:
     points_horizontal_centered = old_generate_paths(startx=15, starty=20, endx=100, endy=50,
-                                                amplitude=10, direction='horizontal')
+                                                    amplitude=10, direction='horizontal')
     points_vertical_centered = old_generate_paths(startx=15, starty=20, endx=100, endy=50,
-                                              amplitude=10, direction='vertical')
+                                                  amplitude=10, direction='vertical')
 
     print("Centered Horizontal Zigzag Points:", points_horizontal_centered)
     print("Centered Vertical Zigzag Points:", points_vertical_centered)
