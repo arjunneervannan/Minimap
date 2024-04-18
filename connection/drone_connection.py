@@ -57,13 +57,16 @@ def convert_positions_to_mission_items(profile):
     i += 1
 
     for j, position in enumerate(profile):
-        mission_items.append(missionItem(i, 0, position[0], position[1], position[2]))
+        if j == len(profile) - 1:
+            landing = missionItem(i, 0, profile[-1][0], profile[-1][1], 1)
+            landing.command = mavutil.mavlink.MAV_CMD_NAV_LAND
+            landing.param1 = 0
+            mission_items.append(landing)
+        elif j == 0:
+            continue    
+        else:
+            mission_items.append(missionItem(i, 0, position[0], position[1], position[2]))
         i += 1
-    
-    landing = missionItem(i, 0, profile[0][0], profile[0][1], 1)
-    landing.command = mavutil.mavlink.MAV_CMD_NAV_LAND
-    landing.param1 = 0
-    mission_items.append(landing)
 
     return mission_items
 
@@ -154,7 +157,12 @@ class drone:
 
         self.ack("MISSION_REQUEST")
 
-        for waypoint in mission_items:
+        self.the_connection.mav.command_long_send(self.the_connection.target_system,
+                                                  self.the_connection.target_component,
+                                                  mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+                                                  15, 0, 0, 0, 0, 0, 0, 30)
+
+        for index, waypoint in enumerate(mission_items):
             print("-- Creating a waypoint")
             self.the_connection.mav.mission_item_send(self.the_connection.target_system,  # Target System
                                                       self.the_connection.target_component,  # Target Component
@@ -176,8 +184,12 @@ class drone:
                                                       waypoint.param6,  # Local Y - Longitude
                                                       waypoint.param7,  # Local Z - Altitude
                                                       waypoint.mission_type)  # Mission Type
-            if waypoint != mission_items[n - 1]:
+            # if index == 0:
+            #     self.ack("COMMAND_ACK")
+            if index != n - 1:
                 self.ack("MISSION_REQUEST")
+            # if waypoint != mission_items[n - 1]:
+            #     self.ack("MISSION_REQUEST")
 
         ack = self.ack("MISSION_ACK")
         if ack.type == 0:

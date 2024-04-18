@@ -191,8 +191,8 @@ class App(customtkinter.CTk):
                                        icon=tkinter.messagebox.INFO).show()
 
     def upload_mission(self):
-        if len(self.rectangle_list) == 0:
-            messagebox.showerror("Error", "Please draw a rectangle")
+        if len(self.path_list) == 0:
+            messagebox.showerror("Error", "Please draw a path")
             return
         
         if not self.drone.is_connected:
@@ -211,11 +211,12 @@ class App(customtkinter.CTk):
 
         waypoints = self.path_list[answer].position_list
         data = self.path_list[answer].data
-        
+
         if data.type == 'rectangle':
-            profile = simple_landing_profile(waypoints, alt)
+            profile = simple_landing_profile(waypoints, alt, 15)
         elif data.type == 'custom':
-            profile = custom_simple_landing_profile(waypoints, alt, 15)
+            profile = custom_simple_landing_profile(waypoints, alt)
+            print("custom profile")
         if profile is None:
             messagebox.showerror("Error", "Profile too steep to land safely")
             return

@@ -201,9 +201,10 @@ def custom_simple_landing_profile(waypoints, cruising_altitude):
     profile = []
 
     for i in range(len(waypoints)):
+        if i >= len(waypoints) - 4:
+            cruising_altitude = cruising_altitude * 0.8
         profile.append((waypoints[i][0], waypoints[i][1], cruising_altitude))
-        if i == len(waypoints) - 2:
-            cruising_altitude = cruising_altitude * 0.5
+    return profile
 
 def simple_landing_profile(waypoints, cruising_altitude, descent_angle):
     home_waypoint = waypoints[-1]
