@@ -10,13 +10,13 @@ class missionItem:
         self.command = mavutil.mavlink.MAV_CMD_NAV_WAYPOINT  # Move to the waypoint
         self.current = current
         self.autocontinue = 0
-        self.param1 = 0.0 # hold time
-        self.param2 = 10.0 # Acceptance radius
-        self.param3 = 0.0 # pass radius
-        self.param4 = math.nan # not using
-        self.param5 = x # lat
-        self.param6 = y # lon
-        self.param7 = z # altitude
+        self.param1 = 0.0  # hold time
+        self.param2 = 10.0  # Acceptance radius
+        self.param3 = 0.0  # pass radius
+        self.param4 = math.nan  # not using
+        self.param5 = x  # lat
+        self.param6 = y  # lon
+        self.param7 = z  # altitude
         self.mission_type = 0  # The MAV_MISSION_TYPE value for MAV_MISSION_TYPE_MISSION
 
 
