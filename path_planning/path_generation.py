@@ -1,6 +1,6 @@
 import matplotlib
 
-from path_modules.path_utils import *
+from path_planning.path_utils import *
 
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt

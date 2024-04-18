@@ -10,7 +10,7 @@ from connection.drone_utils import convert_positions_to_mission_items
 
 sys.path.append('.')
 
-from path_modules.path_generation import *
+from path_planning.path_generation import *
 from connection.drone_connection import *
 from connection.drone_data import *
 
@@ -67,8 +67,8 @@ class App(customtkinter.CTk):
         self.app_name.grid(row=0, column=0, padx=(20, 20), pady=(20, 0))
 
         self.disarm_drone_button = customtkinter.CTkButton(master=self.frame_left,
-                                                        text="Disarm Drone",
-                                                        command=self.disarm_drone)
+                                                           text="Disarm Drone",
+                                                           command=self.disarm_drone)
         self.disarm_drone_button.grid(pady=(20, 0), padx=(20, 20), row=2, column=0)
 
         self.arm_drone_button = customtkinter.CTkButton(master=self.frame_left,
@@ -188,14 +188,14 @@ class App(customtkinter.CTk):
     def connect_to_drone(self):
         self.drone.connect()
         if self.drone.is_connected:
-            tkinter.messagebox.Message(master=None, message="Drone connected succesfully", 
+            tkinter.messagebox.Message(master=None, message="Drone connected succesfully",
                                        icon=tkinter.messagebox.INFO).show()
 
     def upload_mission(self):
         if len(self.path_list) == 0:
             messagebox.showerror("Error", "Please draw a path")
             return
-        
+
         if not self.drone.is_connected:
             messagebox.showerror("Error", "Drone is not connected")
             return
@@ -226,7 +226,7 @@ class App(customtkinter.CTk):
         if self.drone.is_connected:
             mission_items = convert_positions_to_mission_items(profile)  # includes takeoff and landing
             if self.drone.upload_mission(mission_items):
-                tkinter.messagebox.Message(master=None, message="Mission uploaded succesfully", 
+                tkinter.messagebox.Message(master=None, message="Mission uploaded succesfully",
                                            icon=tkinter.messagebox.INFO).show()
                 for point in profile:
                     self.map_widget.set_marker(point[0], point[1], text=f"{point[2]} m")
@@ -238,21 +238,21 @@ class App(customtkinter.CTk):
         if self.drone.is_connected:
             self.drone.auto()
             if self.drone.arm():
-                tkinter.messagebox.Message(master=None, message="Drone armed succesfully", 
+                tkinter.messagebox.Message(master=None, message="Drone armed succesfully",
                                            icon=tkinter.messagebox.INFO).show()
         else:
-            tkinter.messagebox.Message(master=None, message="Drone is not connected", 
+            tkinter.messagebox.Message(master=None, message="Drone is not connected",
                                        icon=tkinter.messagebox.ERROR).show()
 
     def disarm_drone(self):
         if self.drone.is_connected:
             if self.drone.disarm():
-                tkinter.messagebox.Message(master=None, message="Drone disarmed succesfully", 
+                tkinter.messagebox.Message(master=None, message="Drone disarmed succesfully",
                                            icon=tkinter.messagebox.INFO).show()
         else:
-            tkinter.messagebox.Message(master=None, message="Drone is not connected", 
+            tkinter.messagebox.Message(master=None, message="Drone is not connected",
                                        icon=tkinter.messagebox.ERROR).show()
-    
+
     def update_gps(self):
         if self.drone:
             pitch = 0
@@ -295,7 +295,7 @@ class App(customtkinter.CTk):
         if not self.home:
             messagebox.showerror("Error", "Please set home location")
             return
-        
+
         coordinates.append(self.home.position)
 
         for marker in self.marker_list:
@@ -409,7 +409,7 @@ class App(customtkinter.CTk):
             return
 
         turning_radius_ft, avoid_path = self.generate_paths_dialogbox()
-        
+
         if turning_radius_ft == None:
             messagebox.showerror("Error", "Please enter valid input")
             return
@@ -482,15 +482,15 @@ class App(customtkinter.CTk):
 
     def generate_paths_dialogbox(self):
         turning_radius = simpledialog.askinteger("Input", "What is your desired turning radius (m)?",
-                                         parent=self.frame_right)
+                                                 parent=self.frame_right)
         answer = simpledialog.askstring("Input", "Do you want to avoid crossing paths on return? Y for yes and N for "
-                                                  "no.",
-                                         parent=self.frame_right)
+                                                 "no.",
+                                        parent=self.frame_right)
         if answer == 'Y':
             return turning_radius, True
         elif answer == 'N':
             return turning_radius, False
-        
+
         return None, None
 
     def export_paths_to_file(self):
