@@ -427,8 +427,8 @@ class App(customtkinter.CTk):
                 # self.map_widget.set_marker(horizontal_path[-1][0], horizontal_path[-1][1], text="ending horiz")
                 # self.map_widget.set_marker(vertical_path[-1][0], vertical_path[-1][1], text="ending vert")
 
-                horizontal_path.insert(0, horizontal_path[-1])
-                vertical_path.insert(0, vertical_path[-1])
+                # horizontal_path.insert(0, horizontal_path[-1])
+                # vertical_path.insert(0, vertical_path[-1])
 
                 horiz_length = total_path_distance(horizontal_path)
                 vert_length = total_path_distance(vertical_path)
