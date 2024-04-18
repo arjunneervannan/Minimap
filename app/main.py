@@ -211,6 +211,7 @@ class App(customtkinter.CTk):
 
         waypoints = self.path_list[answer].position_list
         data = self.path_list[answer].data
+        profile = None
 
         if data.type == 'rectangle':
             profile = simple_landing_profile(waypoints, alt, 15)
@@ -427,7 +428,8 @@ class App(customtkinter.CTk):
                                                  home_coords[0],
                                                  home_coords[1],
                                                  delta_lon,
-                                                 direction='horizontal')
+                                                 direction='horizontal',
+                                                 avoid_path=avoid_path)
                 vertical_path = generate_paths(startx,
                                                starty,
                                                endx,
