@@ -1,6 +1,8 @@
 from connection.drone_connection import *
 import pickle as pkl
 
+from connection.drone_utils import convert_positions_to_mission_items
+
 
 def main():
     the_drone = drone()

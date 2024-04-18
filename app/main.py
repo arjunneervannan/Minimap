@@ -6,6 +6,8 @@ import pickle as pkl
 from tkinter import messagebox
 from tkinter import simpledialog
 
+from connection.drone_utils import convert_positions_to_mission_items
+
 sys.path.append('.')
 
 from path_modules.path_generation import *
