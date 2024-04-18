@@ -1,5 +1,15 @@
 class drone_data:
-    def __init__(self, alt=0, pitch=0, roll=0, yaw=0, groundspeed=0, airspeed=0, heading=0, drone_id=1, lat=39.952, lon=-75.192, ):
+    def __init__(self,
+                 alt=0,
+                 pitch=0,
+                 roll=0,
+                 yaw=0,
+                 groundspeed=0,
+                 airspeed=0,
+                 heading=0,
+                 drone_id=1,
+                 lat=39.952,
+                 lon=-75.192):
         self.drone_id = drone_id
         self.lat = lat
         self.lon = lon

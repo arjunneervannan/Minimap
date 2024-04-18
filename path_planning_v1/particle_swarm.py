@@ -2,8 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
+
 def objective_function(position, target):
     return np.linalg.norm(position - target)
+
 
 def plot_swarm(positions, target, iteration, best_distance, acceptable_radius, ax):
     ax.clear()
@@ -15,6 +17,7 @@ def plot_swarm(positions, target, iteration, best_distance, acceptable_radius, a
     ax.set_xlim(0, 100)
     ax.set_ylim(0, 100)
 
+
 def max_magnitude(input_val, max_val=0.5):
     if abs(input_val) > max_val:
         if input_val < 0:
@@ -22,7 +25,9 @@ def max_magnitude(input_val, max_val=0.5):
         return max_val
     return input_val
 
-def particle_swarm_optimization_visualized(num_particles, num_dimensions, target, max_iterations=100, c1=2.0, c2=2.0, w=0.3):
+
+def particle_swarm_optimization_visualized(num_particles, num_dimensions, target, max_iterations=100, c1=2.0, c2=2.0,
+                                           w=0.3):
     fig, ax = plt.subplots(figsize=(8, 8))
 
     positions = np.zeros((num_particles, num_dimensions))
@@ -44,7 +49,7 @@ def particle_swarm_optimization_visualized(num_particles, num_dimensions, target
             r1, r2 = np.random.rand(), np.random.rand()
             velocities[i] = w * velocities[i] + c1 * r1 * (personal_best_positions[i] - positions[i]) + \
                             c2 * r2 * (global_best_position - positions[i])
-            normalized_velocity = max_velocity * velocities[i]/np.linalg.norm(velocities[i])
+            normalized_velocity = max_velocity * velocities[i] / np.linalg.norm(velocities[i])
 
             positions[i] = positions[i] + normalized_velocity
 
@@ -66,6 +71,7 @@ def particle_swarm_optimization_visualized(num_particles, num_dimensions, target
     plt.show()
 
     return global_best_position, global_best_value
+
 
 num_particles = 12
 num_dimensions = 2
