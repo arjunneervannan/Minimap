@@ -1,9 +1,13 @@
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
+
 def objective_function(position, target):
     return np.linalg.norm(position - target)
+
 
 def plot_swarm(scout_positions, positions, target, iteration, best_distance, bound, target_found, ax):
     ax.clear()
@@ -17,22 +21,24 @@ def plot_swarm(scout_positions, positions, target, iteration, best_distance, bou
     ax.set_xlim(0, bound)
     ax.set_ylim(0, bound)
 
+
 def convert_square_coord_to_position(current_position, max_velocity):
-    position_in_square = (current_position[0] * max_velocity + max_velocity / 2, current_position[1] * max_velocity + max_velocity / 2)
+    position_in_square = (
+    current_position[0] * max_velocity + max_velocity / 2, current_position[1] * max_velocity + max_velocity / 2)
     return position_in_square
 
 
 def double_path_size(path):
     test = path[::-1]
     return path + test
-    
+
 
 def generate_path_1(bound, max_velocity, viewing_radius):
     path = []
     current_position = (0, 0)
     path.append(current_position)
     length_of_square = int(bound / viewing_radius)
-    
+
     for x_pos in range(0, length_of_square):
         for y_pos in range(0, length_of_square):
             parity = x_pos % 2
@@ -51,7 +57,7 @@ def generate_path_2(bound, max_velocity, viewing_radius):
     current_position = (0, 0)
     path.append(current_position)
     length_of_square = int(bound / viewing_radius)
-    
+
     for y_pos in range(0, length_of_square):
         for x_pos in range(0, length_of_square):
             parity = y_pos % 2
@@ -72,22 +78,23 @@ def check_if_target_found(scout_positions, target, viewing_radius):
             return True
     return False
 
+
 def generate_diagonal_path(bound, max_velocity, viewing_radius):
     path = []
     current_position = (0, 0)
     path.append(current_position)
     length_of_square = int(bound / viewing_radius)
-    solution=[[] for i in range(2 * length_of_square - 1)]
-    
+    solution = [[] for i in range(2 * length_of_square - 1)]
+
     for x_pos in range(0, length_of_square):
         for y_pos in range(0, length_of_square):
             sum = x_pos + y_pos
             current_position = (x_pos, y_pos)
-            if(sum % 2 ==0):
-                #add at beginning
-                solution[sum].insert(0,current_position)
+            if (sum % 2 == 0):
+                # add at beginning
+                solution[sum].insert(0, current_position)
             else:
-                #add at end of the list
+                # add at end of the list
                 solution[sum].append(current_position)
 
     # print the solution as it as
@@ -95,23 +102,24 @@ def generate_diagonal_path(bound, max_velocity, viewing_radius):
         for j in i:
             path.append(convert_square_coord_to_position(j, max_velocity))
     return path
+
 
 def generate_diagonal_path_2(bound, max_velocity, viewing_radius):
     path = []
     current_position = (0, 0)
     path.append(current_position)
     length_of_square = int(bound / viewing_radius)
-    solution=[[] for i in range(2 * length_of_square - 1)]
-    
+    solution = [[] for i in range(2 * length_of_square - 1)]
+
     for y_pos in range(0, length_of_square):
         for x_pos in range(0, length_of_square):
             sum = x_pos + y_pos
             current_position = (x_pos, y_pos)
-            if(sum % 2 ==0):
-                #add at beginning
-                solution[sum].insert(0,current_position)
+            if (sum % 2 == 0):
+                # add at beginning
+                solution[sum].insert(0, current_position)
             else:
-                #add at end of the list
+                # add at end of the list
                 solution[sum].append(current_position)
 
     # print the solution as it as
@@ -119,6 +127,7 @@ def generate_diagonal_path_2(bound, max_velocity, viewing_radius):
         for j in i:
             path.append(convert_square_coord_to_position(j, max_velocity))
     return path
+
 
 def generate_spiral_path(bound, max_velocity, viewing_radius):
     result = []
@@ -160,10 +169,12 @@ def generate_spiral_path(bound, max_velocity, viewing_radius):
 
     return result
 
-def particle_swarm_optimization_visualized(num_particles, num_dimensions, target, max_iterations=2000, c1=1.0, c2=2.0, w=0.8):
+
+def particle_swarm_optimization_visualized(num_particles, num_dimensions, target, max_iterations=2000, c1=1.0, c2=2.0,
+                                           w=0.8):
     fig, ax = plt.subplots(figsize=(8, 8))
     scout_drone_ids = [0, 1, 2, 3, 4]
-    
+
     scout_positions = np.zeros((len(scout_drone_ids), num_dimensions))
 
     positions = np.zeros((num_particles, num_dimensions))
@@ -176,15 +187,15 @@ def particle_swarm_optimization_visualized(num_particles, num_dimensions, target
     path_3 = generate_diagonal_path(bound, max_velocity, max_velocity)
     path_4 = generate_diagonal_path_2(bound, max_velocity, max_velocity)
     path_5 = generate_spiral_path(bound, max_velocity, max_velocity)
-    
+
     path_1_full = double_path_size(double_path_size(path_1))
     path_2_full = double_path_size(double_path_size(path_2))
     path_3_full = double_path_size(double_path_size(path_3))
     path_4_full = double_path_size(double_path_size(path_4))
     path_5_full = double_path_size(double_path_size(path_5))
-    
+
     all_paths = [path_1_full, path_2_full, path_3_full, path_4_full, path_5_full]
-    
+
     personal_best_positions = positions.copy()
     personal_best_values = np.array([objective_function(pos, target) for pos in personal_best_positions])
 
@@ -195,7 +206,7 @@ def particle_swarm_optimization_visualized(num_particles, num_dimensions, target
 
     def update(frame):
         nonlocal positions, velocities, personal_best_positions, personal_best_values, global_best_position, global_best_value, target_found, max_velocity, path_index
-        
+
         if (not target_found):
             for drone_id in scout_drone_ids:
                 scout_positions[drone_id] = all_paths[drone_id][path_index]
@@ -207,10 +218,11 @@ def particle_swarm_optimization_visualized(num_particles, num_dimensions, target
             path_index += 1
             for drone_id in range(num_particles):
                 r1, r2 = np.random.rand(), np.random.rand()
-                velocities[drone_id] = w * velocities[drone_id] + c1 * r1 * (personal_best_positions[drone_id] - positions[drone_id]) + \
-                                c2 * r2 * (global_best_position - positions[drone_id])
-                normalized_velocity = max_velocity * velocities[drone_id]/np.linalg.norm(velocities[drone_id])
-                
+                velocities[drone_id] = w * velocities[drone_id] + c1 * r1 * (
+                            personal_best_positions[drone_id] - positions[drone_id]) + \
+                                       c2 * r2 * (global_best_position - positions[drone_id])
+                normalized_velocity = max_velocity * velocities[drone_id] / np.linalg.norm(velocities[drone_id])
+
                 positions[drone_id] = positions[drone_id] + normalized_velocity
 
                 fitness = objective_function(positions[drone_id], target)
@@ -232,10 +244,15 @@ def particle_swarm_optimization_visualized(num_particles, num_dimensions, target
 
     return global_best_position, global_best_value
 
-num_particles = 7
-num_dimensions = 2
-target = np.random.rand(2) * 100  # Random initialization of the target
-# target = (20, 20)
-best_position, best_value = particle_swarm_optimization_visualized(num_particles, num_dimensions, target)
-print(f"Optimal Position: {best_position}, Optimal Value: {best_value}")
-    
+
+def main():
+    num_particles = 7
+    num_dimensions = 2
+    target = np.random.rand(2) * 100  # Random initialization of the target
+    # target = (20, 20)
+    best_position, best_value = particle_swarm_optimization_visualized(num_particles, num_dimensions, target)
+    print(f"Optimal Position: {best_position}, Optimal Value: {best_value}")
+
+
+if __name__ == '__main__':
+    main()

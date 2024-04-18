@@ -482,7 +482,8 @@ class App(customtkinter.CTk):
     def generate_paths_dialogbox(self):
         turning_radius = simpledialog.askinteger("Input", "What is your desired turning radius (m)?",
                                          parent=self.frame_right)
-        answer = simpledialog.askinteger("Input", "Do you want to avoid crossing paths on return? Y for yes and N for no.",
+        answer = simpledialog.askstring("Input", "Do you want to avoid crossing paths on return? Y for yes and N for "
+                                                  "no.",
                                          parent=self.frame_right)
         if answer == 'Y':
             return turning_radius, True

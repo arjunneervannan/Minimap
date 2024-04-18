@@ -141,7 +141,6 @@ def generate_rectangle_paths(startx, starty, endx, endy, amplitude, direction='h
 
 def go_home(x1, y1, x2, y2, startx, starty, endx, endy):
     def line_intersects_rect(p1, p2, r):
-        """Check if line segment p1-p2 intersects with rectangle r."""
         r_minx, r_miny = min(r[0], r[2]), min(r[1], r[3])
         r_maxx, r_maxy = max(r[0], r[2]), max(r[1], r[3])
         # Rectangle sides
@@ -157,8 +156,6 @@ def go_home(x1, y1, x2, y2, startx, starty, endx, endy):
         return False
 
     def segments_intersect(p1, p2, p3, p4):
-        """Return True if line segments p1-p2 and p3-p4 intersect."""
-
         def ccw(A, B, C):
             return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0])
 
@@ -203,9 +200,10 @@ def custom_simple_landing_profile(waypoints, cruising_altitude):
 
     for i in range(len(waypoints)):
         if i >= len(waypoints) - 4:
-            cruising_altitude = cruising_altitude * 0.8
+            cruising_altitude = cruising_altitude - 2
         profile.append((waypoints[i][0], waypoints[i][1], cruising_altitude))
     return profile
+
 
 def simple_landing_profile(waypoints, cruising_altitude, descent_angle):
     home_waypoint = waypoints[-1]
