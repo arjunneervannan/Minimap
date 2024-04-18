@@ -1,5 +1,6 @@
-from drone_connection import *
+from connection.drone_connection import *
 import pickle as pkl
+
 
 def main():
     the_drone = drone()
@@ -47,6 +48,7 @@ def main():
         except KeyboardInterrupt:
             print("Program terminated by user")
             break
+
 
 if __name__ == "__main__":
     main()

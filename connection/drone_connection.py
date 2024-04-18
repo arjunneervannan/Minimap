@@ -7,8 +7,6 @@ os.environ['MAVLINK20'] = ''
 
 
 from pymavlink import mavutil
-from argparse import ArgumentParser
-import socket
 import math
 
 
@@ -359,8 +357,7 @@ class drone:
             print("GPS Command failed")
 
 
-# Test Functions
-if __name__ == "__main__":
+def test():
     print("-- Program Started")
     # the_connection = mavutil.mavlink_connection('udp:localhost:14540')
     the_connection = mavutil.mavlink_connection('COM6', baud=57600)
@@ -427,38 +424,13 @@ if __name__ == "__main__":
         if num > 200:
             f.close()
             break
-        # gps_message = the_connection.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
-        # battery_message = the_connection.recv_match(type='BATTERY_STATUS', blocking=False)
-        # if battery_message:
-        #     print("Battery Message Read: " + str(battery_message))
-        # if gps_message:
-        #     print("GPS Message Read: " + str(gps_message))
+        gps_message = the_connection.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
+        battery_message = the_connection.recv_match(type='BATTERY_STATUS', blocking=False)
+        if battery_message:
+            print("Battery Message Read: " + str(battery_message))
+        if gps_message:
+            print("GPS Message Read: " + str(gps_message))
 
-    # mission_waypoints = []
-    # mission_waypoints.append(mission_item(0, 0, 42.44312627231835, -83.99860183785319, 10))  # Above takeoff point
-    # mission_waypoints.append(mission_item(1, 0, 42.44323746936555, -83.99613245948624, 10))  # Above Destination Point
-    # mission_waypoints.append(mission_item(2, 0, 42.44327423746765, -83.99613245948624, 5))   # Destination Point
-
-    # upload_mission(the_connection, mission_waypoints)
-
-    # arm(the_connection)
-
-    # takeoff(the_connection)
-
-    # start_mission(the_connection)
-
-    # for mission_item in mission_waypoints:
-    #     print("Message Read = " + str(the_connection.recv_match(type="MISSION_ITEM_REACHED", condition="MISSION_ITEM_REACHED.seq == {0}".format(mission_item.seq), blocking=True)))
-
-    # set_return(the_connection)
-
-# # Start a connection listening on a UDP port
-# the_connection = mavutil.mavlink_connection('COM6',baud=57600)
-
-# # Wait for the first heartbeat
-# #   This sets the system and component ID of remote system for the link
-# print("waiting for heartbeat")
-# the_connection.wait_heartbeat()
-# print("Heartbeat from system (system %u component %u)" % (the_connection.target_system, the_connection.target_component))
-
-# # Once connected, use 'the_connection' to get and send messages
+# Test Functions
+if __name__ == "__main__":
+    test()

@@ -1,6 +1,5 @@
 import customtkinter
 import tkinter
-from networkx import is_connected
 from tkintermapview import TkinterMapView
 import sys
 import pickle as pkl
@@ -9,7 +8,7 @@ from tkinter import simpledialog
 
 sys.path.append('.')
 
-from connection.path_generation import *
+from path_modules.path_generation import *
 from connection.drone_connection import *
 from connection.drone_data import *
 

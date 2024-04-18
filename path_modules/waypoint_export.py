@@ -1,5 +1,3 @@
-import os
-
 
 def generate_waypoints(point_list, file_name):
     file_name = f'./waypoints/{file_name}'
