@@ -40,13 +40,14 @@ def old_generate_paths(startx, starty, endx, endy, amplitude, direction='horizon
     return points
 
 
-def generate_paths(startx, starty, endx, endy, x_home, y_home, amplitude, direction='horizontal'):
+def generate_paths(startx, starty, endx, endy, x_home, y_home, amplitude, direction='horizontal', avoid_path=False):
     points = generate_rectangle_paths(startx, starty, endx, endy, amplitude, direction)
 
     outside_point = generate_outside_point(startx, starty, endx, endy, points[-1][0], points[-1][1], amplitude)
-    # points.append(outside_point)
-    # home_sequence = go_home(outside_point[0], outside_point[1], x_home, y_home, startx, starty, endx, endy)
-    # points.extend(home_sequence)
+    if avoid_path:
+        points.append(outside_point)
+        home_sequence = go_home(outside_point[0], outside_point[1], x_home, y_home, startx, starty, endx, endy)
+        points.extend(home_sequence)
     points.append((x_home, y_home))
     return points
 

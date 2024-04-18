@@ -406,7 +406,11 @@ class App(customtkinter.CTk):
             messagebox.showerror("Error", "Please set home location")
             return
 
-        turning_radius_ft = self.generate_paths_dialogbox()
+        turning_radius_ft, avoid_path = self.generate_paths_dialogbox()
+        
+        if turning_radius_ft == None:
+            messagebox.showerror("Error", "Please enter valid input")
+            return
 
         for rectangle in self.rectangle_list:
             if not rectangle.deleted:
@@ -431,7 +435,8 @@ class App(customtkinter.CTk):
                                                home_coords[0],
                                                home_coords[1],
                                                delta_lat,
-                                               direction='vertical')
+                                               direction='vertical',
+                                               avoid_path=avoid_path)
                 # self.map_widget.set_marker(horizontal_path[0][0], horizontal_path[0][1], text="start horiz")
                 # self.map_widget.set_marker(vertical_path[0][0], vertical_path[0][1], text="start vert")
                 #
@@ -473,9 +478,16 @@ class App(customtkinter.CTk):
                                                                data=vert_path_data))
 
     def generate_paths_dialogbox(self):
-        answer = simpledialog.askinteger("Input", "What is your desired turning radius (m)?",
+        turning_radius = simpledialog.askinteger("Input", "What is your desired turning radius (m)?",
                                          parent=self.frame_right)
-        return answer
+        answer = simpledialog.askinteger("Input", "Do you want to avoid crossing paths on return? Y for yes and N for no.",
+                                         parent=self.frame_right)
+        if answer == 'Y':
+            return turning_radius, True
+        elif answer == 'N':
+            return turning_radius, False
+        
+        return None, None
 
     def export_paths_to_file(self):
         print("exporting paths to file")
