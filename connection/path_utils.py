@@ -2,11 +2,12 @@ import math
 
 
 class path_data:
-    def __init__(self, index, length, time, area):
+    def __init__(self, index, length, time, area, type='rectangle'):
         self.index = index
         self.length = length
         self.time = time
         self.area = area
+        self.type = type
 
 
 def feet_to_latlon(feet, current_lat):

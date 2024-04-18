@@ -197,6 +197,14 @@ def go_home(x1, y1, x2, y2, startx, starty, endx, endy):
         return [(x1, y1), (x2, y2)]
 
 
+def custom_simple_landing_profile(waypoints, cruising_altitude):
+    profile = []
+
+    for i in range(len(waypoints)):
+        profile.append((waypoints[i][0], waypoints[i][1], cruising_altitude))
+        if i == len(waypoints) - 2:
+            cruising_altitude = cruising_altitude * 0.5
+
 def simple_landing_profile(waypoints, cruising_altitude, descent_angle):
     home_waypoint = waypoints[-1]
     second_to_last = waypoints[-2]

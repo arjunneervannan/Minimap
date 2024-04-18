@@ -210,11 +210,15 @@ class App(customtkinter.CTk):
                                       parent=self.frame_right)
 
         waypoints = self.path_list[answer].position_list
-        profile = simple_landing_profile(waypoints, alt, 15)
+        data = self.path_list[answer].data
+        
+        if data.type == 'rectangle':
+            profile = simple_landing_profile(waypoints, alt)
+        elif data.type == 'custom':
+            profile = custom_simple_landing_profile(waypoints, alt, 15)
         if profile is None:
             messagebox.showerror("Error", "Profile too steep to land safely")
             return
-        
 
         if self.drone.is_connected:
             mission_items = convert_positions_to_mission_items(profile)  # includes takeoff and landing
@@ -285,10 +289,15 @@ class App(customtkinter.CTk):
 
     def add_path_event(self):
         coordinates = []
+        if not self.home:
+            messagebox.showerror("Error", "Please set home location")
+            return
+        
+        coordinates.append(self.home.position)
+
         for marker in self.marker_list:
             if not marker.deleted:
                 coordinates.append(marker.position)
-        coordinates.append(coordinates[0])
 
         horiz_length = total_path_distance(coordinates)
         horiz_time = total_time(horiz_length, self.drone_speed)
@@ -296,7 +305,8 @@ class App(customtkinter.CTk):
         custom_path_data = path_data(index=self.path_index,
                                      length=horiz_length,
                                      time=horiz_time,
-                                     area=0)
+                                     area=0,
+                                     type='custom')
 
         self.path_list.append(self.map_widget.set_path(coordinates,
                                                        width=4,
